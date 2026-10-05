@@ -1,0 +1,14 @@
+server:
+  address: 127.0.0.1
+  port: 8087
+
+spring:
+  application:
+    name: catfi-bff
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connectTimeout: 3000
+            readTimeout: 5000

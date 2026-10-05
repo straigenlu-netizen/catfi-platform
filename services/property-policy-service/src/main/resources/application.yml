@@ -1,0 +1,8 @@
+server:
+  address: 127.0.0.1
+  port: 8084
+spring:
+  application:
+    name: property-policy-service
+  profiles:
+    default: demo

@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: portfolio-service
+  datasource:
+    url: ${CATFI_DB_URL:jdbc:postgresql://localhost:5432/catfi_portfolio}
+    username: ${CATFI_DB_USER:postgres}
+    password: ${CATFI_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: portfolio-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "dev.catfi.*"
+
+logging:
+  level:
+    dev.catfi.portfolio: DEBUG
