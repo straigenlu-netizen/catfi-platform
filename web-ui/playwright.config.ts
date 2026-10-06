@@ -4,7 +4,9 @@ export default defineConfig({
     testDir: "./tests",
     testMatch: process.env.CATFI_E2E_LIVE
         ? "**/live-pipeline.spec.ts"
-        : "**/control-room.spec.ts",
+        : process.env.CATFI_E2E_EXPORT
+          ? "**/aws-export.spec.ts"
+          : "**/control-room.spec.ts",
     timeout: 45000,
     workers: 1,
     use: {

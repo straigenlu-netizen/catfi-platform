@@ -28,3 +28,11 @@ This baseline is not complete security coverage. Real customers, payments, inves
 The local BFF validates trigger requests and permits CORS only for local Vite origins. CORS does not block curl/server callers or implement authorization. Compose publishes only UI/BFF HTTP endpoints on loopback; internal service HTTP ports are unpublished. The control room has no OIDC login or ownership enforcement yet. Protected compensation preview remains a separate JWT/scope feature.
 
 Weather integration returns sanitized provider errors and does not explicitly log exception messages that may contain API keys. API keys belong in environment variables. BFF failures return generic gateway errors. Production authentication, TLS, Kafka ACLs and durable audit remain planned.
+
+## AWS branch security boundary
+
+The new Export API uses API Gateway JWT validation and explicit Cognito-sub/property grants checked again at job read/download. Users cannot export arbitrary CatFi client records based on profile IDs. S3 is private, encrypted and HTTPS-only; signed URLs grant access to their bearer and must not be logged. Roles use temporary credentials; GitHub OIDC trust is restricted to one repository/environment, and environment deployment branches must be main. The bootstrap CloudFormation role is powerful provisioning authority for a dedicated learning stack and is not a production least-privilege policy.
+
+Secrets Manager stores OpenWeather credentials. Schedule/SES notification activation is explicit through deployment parameters. Provider failures are sanitized. Unit tests never send email; cloud smoke uses a suppressed temporary Cognito account. Existing local BFF/internal reporting endpoints retain demo security and must not be exposed as production APIs. No real money movement is introduced.
+
+GitHub security.yml offers opt-in Sonar quality gate and CodeQL; private CodeQL licensing and Sonar settings must be configured. Dependabot and npm audit complement these checks. Review permissions and dependency alerts before activating deployment. Recovery scripts are operator-only; runtime roles do not receive their administrative permissions.

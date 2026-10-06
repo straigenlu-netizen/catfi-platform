@@ -1,3 +1,4 @@
+import { ReportExport } from "./ReportExport";
 import { useState, lazy, Suspense } from "react";
 import { Link, NavLink, Route, Routes, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -433,6 +434,7 @@ export function PropertyDetails() {
                 </div>
                 <Status value={report?.status ?? "SAFE"} />
             </div>
+            <ReportExport propertyId={property.propertyId} ready={report?.status === "REPORTED"} />
             <div className="metrics">
                 <Metric
                     title="Assessed damage"

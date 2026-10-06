@@ -13,6 +13,7 @@ public class WeatherService {
   private final OpenWeatherClient openWeatherClient;
 
   private final String apiKey;
+  private WeatherCache cache;
 
   public WeatherService(
       OpenWeatherClient openWeatherClient, @Value("${weather.api.key:}") String apiKey) {
@@ -20,8 +21,15 @@ public class WeatherService {
     this.apiKey = apiKey;
   }
 
+  @org.springframework.beans.factory.annotation.Autowired
+  public WeatherService(OpenWeatherClient client, @Value("${weather.api.key:}") String apiKey,
+      org.springframework.beans.factory.ObjectProvider<WeatherCache> cache) {
+    this(client,apiKey);this.cache=cache.getIfAvailable();
+  }
+
   public WeatherSnapshot getCurrentWeather(String city) {
     if (city == null || city.isBlank()) throw new IllegalArgumentException("City is required");
+    if(cache!=null)return cache.find(city).orElseThrow(()->new WeatherIntegrationException("Weather cache expired or unavailable",null));
     if (apiKey == null || apiKey.isBlank())
       throw new WeatherIntegrationException("Weather provider is not configured", null);
     try {

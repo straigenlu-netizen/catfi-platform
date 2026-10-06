@@ -1,5 +1,36 @@
 # Validation
 
+## 2026-10-06 — AWS implementation, current verification
+
+Environment: Java 21.0.12.1, Maven 3.9.11, Node 24, Chromium 141, DynamoDB Local 1.25.1. Current evidence is also recorded in [docs/aws/VERIFICATION_RESULTS.json](docs/aws/VERIFICATION_RESULTS.json).
+
+| Check | Result |
+| --- | --- |
+| Java unit/web/component tests, all 18 child modules | 114 passed, 0 failures/errors/skips |
+| DamageKafkaIT | Passed, real embedded Kafka, mocked MongoDB |
+| PipelineKafkaIT | Passed, real HTTP/Feign/Kafka, mocked persistence boundaries |
+| DynamoReportingIT | Passed, actual DynamoDB Local API, restart/concurrency/transactional outbox/export checks |
+| Live browser → BFF → Kafka → reporting | 1 Playwright scenario passed |
+| React unit tests | 7 passed, including export/login/access-denied |
+| Control-room browser contracts | 3 passed |
+| AWS export browser contract | 1 passed, mocked Cognito/export API |
+| TypeScript + production frontend build | Passed; existing large-chunk advisory remains |
+| Standalone Lambda shaded artifact | Built successfully; handler classes packaged |
+| Complete 19-project reactor packaging | BUILD SUCCESS; final packaging pass reused already-passed tests |
+| SAM template + prepared release template | Both sam validate --lint passed |
+| OIDC bootstrap CloudFormation | cfn-lint passed, no errors/warnings |
+| GitHub workflow YAML + Python scripts | Parsed/compiled successfully |
+
+The integration run selected DamageKafkaIT, PipelineKafkaIT and DynamoReportingIT. It did not run DatabaseMigrationIT, because this environment has no Docker. The first packaging attempt found an inherited Maven Shade transformer conflict; it was fixed with explicit transformer override and successful packaging. The existing browser launcher was fixed to resolve a default web-ui path when catfi.web-ui is omitted.
+
+Not executed: PostgreSQL Testcontainers/Liquibase runtime, Compose/container runtime, real AWS cloud_e2e.py, actual Cognito JWT signature verification in AWS, SES/OpenWeather calls, GitHub-hosted workflows, Sonar/CodeQL scans. Cloud account and repository setup are required. Lambda unit tests and browser contracts do not prove real IAM, API Gateway, SQS, Streams, Step Functions or S3 deployment behavior.
+
+DynamoDB Local checks actual SDK/storage operations but not real-cloud IAM, throughput, eventual GSI timing or Streams behavior. Reporting retains bounded correlation state; financial services still need separate inbox/outbox/budget/position locking before competing production writers.
+
+Reproduce using [AWS implementation guide](docs/aws/AWS_IMPLEMENTATION_RU.md). Full integration profile requires Docker and CATFI_DYNAMODB_ENDPOINT for the DynamoDB test. Run cloud_e2e.py only against the configured learning stack.
+
+## Earlier validation records
+
 ## 2026-10-05 — uploaded project review and control room
 
 Environment: Linux, Java 21, Maven 3.9.11, Node.js 24, Chromium 141, Spring Boot 3.5.16 and Spring Cloud 2025.0.3. Uploaded CatFi.zip and CatFi(1).zip contained identical source/configuration files.

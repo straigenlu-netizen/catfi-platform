@@ -1,0 +1,96 @@
+name: Deploy CatFi AWS learning stack
+on:
+  workflow_dispatch:
+    inputs:
+      enable_weather:
+        description: Enable only after setting the OpenWeather secret
+        type: boolean
+        default: false
+      enable_snapstart:
+        description: Enable Java SnapStart exercise
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: catfi-aws-dev
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    environment: aws-dev
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports: ['8000:8000']
+    env:
+      CATFI_DYNAMODB_ENDPOINT: http://localhost:8000
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      STACK_NAME: ${{ vars.AWS_STACK_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web-ui/package-lock.json
+      - run: npm ci && npm test && npm run build
+        working-directory: web-ui
+      - run: ./mvnw -B -ntp verify -Pintegration
+      - uses: aws-actions/setup-sam@v2
+      - run: sam validate --lint --template-file infra/aws/template.yaml
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: catfi-${{ github.run_id }}
+      - name: Install operator and cloud test dependencies
+        run: python -m pip install -r scripts/aws/requirements.txt
+      - name: Prepare release identity for code and configuration changes
+        env:
+          EMAIL_FROM: ${{ vars.CATFI_EMAIL_FROM }}
+          EMAIL_TO: ${{ vars.CATFI_EMAIL_TO }}
+          WEATHER: ${{ inputs.enable_weather }}
+          SNAPSTART: ${{ inputs.enable_snapstart }}
+        run: python scripts/aws/prepare_release.py --release "$GITHUB_SHA" --output infra/aws/release.yaml
+      - name: Deploy tested Lambda artifact using CloudFormation execution role
+        env:
+          ARTIFACT_BUCKET: ${{ vars.AWS_ARTIFACT_BUCKET }}
+          CF_ROLE: ${{ vars.AWS_CLOUDFORMATION_ROLE_ARN }}
+          EMAIL_FROM: ${{ vars.CATFI_EMAIL_FROM }}
+          EMAIL_TO: ${{ vars.CATFI_EMAIL_TO }}
+          WEATHER: ${{ inputs.enable_weather }}
+          SNAPSTART: ${{ inputs.enable_snapstart }}
+        run: |
+          sam deploy --template-file infra/aws/release.yaml \
+            --stack-name "$STACK_NAME" --s3-bucket "$ARTIFACT_BUCKET" \
+            --s3-prefix "$STACK_NAME/$GITHUB_SHA" --role-arn "$CF_ROLE" \
+            --capabilities CAPABILITY_IAM --no-confirm-changeset --no-fail-on-empty-changeset \
+            --parameter-overrides "EmailFrom=$EMAIL_FROM" "EmailTo=$EMAIL_TO" \
+              "EnableWeatherSchedule=$WEATHER" "EnableSnapStart=$SNAPSTART" "ReleaseId=$GITHUB_SHA"
+      - name: AWS stack smoke verification
+        run: |
+          python scripts/aws/cloud_e2e.py --stack "$STACK_NAME"
+      - name: Publish backend container for later ECS deployment
+        if: vars.AWS_ECR_REPOSITORY != ''
+        env:
+          ECR_REPOSITORY: ${{ vars.AWS_ECR_REPOSITORY }}
+        run: |
+          aws ecr get-login-password | docker login --username AWS --password-stdin "${ECR_REPOSITORY%%/*}"
+          if ! aws ecr describe-images --repository-name "${ECR_REPOSITORY#*/}" --image-ids "imageTag=$GITHUB_SHA" >/dev/null 2>&1; then
+            docker build --tag "$ECR_REPOSITORY:$GITHUB_SHA" .
+            docker push "$ECR_REPOSITORY:$GITHUB_SHA"
+          fi
+      - name: Notify failed AWS deployment
+        if: failure() && vars.AWS_ALERT_TOPIC_ARN != ''
+        env:
+          ALERT_TOPIC: ${{ vars.AWS_ALERT_TOPIC_ARN }}
+        run: aws sns publish --topic-arn "$ALERT_TOPIC" --subject 'CatFi AWS deployment failed' --message "Run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

@@ -1,0 +1,904 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'CatFi AWS learning stack: durable reporting, authenticated exports,
+  workflows and scheduled weather.'
+Parameters:
+  EmailFrom:
+    Type: String
+    Default: ''
+  EmailTo:
+    Type: String
+    Default: ''
+  EnableWeatherSchedule:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+    - 'true'
+    - 'false'
+  EnableSnapStart:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+    - 'true'
+    - 'false'
+  ReleaseId:
+    Type: String
+    Default: local
+  BrowserOrigins:
+    Type: CommaDelimitedList
+    Default: http://localhost:5173,http://127.0.0.1:5173
+Conditions:
+  MailEnabled:
+    Fn::And:
+    - Fn::Not:
+      - Fn::Equals:
+        - Ref: EmailFrom
+        - ''
+    - Fn::Not:
+      - Fn::Equals:
+        - Ref: EmailTo
+        - ''
+  WeatherEnabled:
+    Fn::Equals:
+    - Ref: EnableWeatherSchedule
+    - 'true'
+  SnapStartEnabled:
+    Fn::Equals:
+    - Ref: EnableSnapStart
+    - 'true'
+Globals:
+  Function:
+    Runtime: java21
+    MemorySize: 512
+    Timeout: 30
+    CodeUri: ../../services/aws-functions/target/catfi-functions.jar
+    AutoPublishAlias: live
+    Tracing: Active
+    Environment:
+      Variables:
+        JOBS_TABLE:
+          Ref: JobsTable
+        REPORTING_TABLE:
+          Ref: ReportingTable
+    SnapStart:
+      ApplyOn:
+        Fn::If:
+        - SnapStartEnabled
+        - PublishedVersions
+        - None
+Resources:
+  ReportingTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: pk
+        AttributeType: S
+      - AttributeName: sk
+        AttributeType: S
+      - AttributeName: gsiPk
+        AttributeType: S
+      - AttributeName: gsiSk
+        AttributeType: S
+      KeySchema:
+      - AttributeName: pk
+        KeyType: HASH
+      - AttributeName: sk
+        KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      GlobalSecondaryIndexes:
+      - IndexName: reports-index
+        KeySchema:
+        - AttributeName: gsiPk
+          KeyType: HASH
+        - AttributeName: gsiSk
+          KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+  JobsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: pk
+        AttributeType: S
+      - AttributeName: sk
+        AttributeType: S
+      KeySchema:
+      - AttributeName: pk
+        KeyType: HASH
+      - AttributeName: sk
+        KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+  WeatherTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: region
+        AttributeType: S
+      KeySchema:
+      - AttributeName: region
+        KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+  ExportBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+        - Id: DevExports
+          Status: Enabled
+          Prefix: exports/
+          ExpirationInDays: 30
+          NoncurrentVersionExpiration:
+            NoncurrentDays: 7
+  ExportBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: ExportBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Deny
+          Principal: '*'
+          Action: s3:*
+          Resource:
+          - Fn::GetAtt:
+            - ExportBucket
+            - Arn
+          - Fn::Sub: ${ExportBucket.Arn}/*
+          Condition:
+            Bool:
+              aws:SecureTransport: 'false'
+  ExportDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+  StreamDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+  SchedulerDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+  ExportQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 180
+      MessageRetentionPeriod: 345600
+      SqsManagedSseEnabled: true
+      RedrivePolicy:
+        deadLetterTargetArn:
+          Fn::GetAtt:
+          - ExportDLQ
+          - Arn
+        maxReceiveCount: 5
+  Alerts:
+    Type: AWS::SNS::Topic
+  AlertSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: MailEnabled
+    Properties:
+      Protocol: email
+      Endpoint:
+        Ref: EmailTo
+      TopicArn:
+        Ref: Alerts
+  WeatherSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Set apiKey outside source control; leave schedule disabled until
+        configured.
+      SecretString: '{"apiKey":""}'
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      UsernameAttributes:
+      - email
+      AutoVerifiedAttributes:
+      - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+      UserPoolTags:
+        CatFi: learning
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId:
+        Ref: UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+      - ALLOW_USER_PASSWORD_AUTH
+      - ALLOW_REFRESH_TOKEN_AUTH
+      PreventUserExistenceErrors: ENABLED
+  ExportApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Auth:
+        DefaultAuthorizer: CognitoJwt
+        Authorizers:
+          CognitoJwt:
+            IdentitySource: $request.header.Authorization
+            JwtConfiguration:
+              issuer:
+                Fn::Sub: https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
+              audience:
+              - Ref: UserPoolClient
+      CorsConfiguration:
+        AllowOrigins:
+          Ref: BrowserOrigins
+        AllowMethods:
+        - GET
+        - POST
+        - OPTIONS
+        AllowHeaders:
+        - authorization
+        - content-type
+        - idempotency-key
+        MaxAge: 300
+  ExportApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dev.catfi.functions.ExportApiHandler::handleRequest
+      Policies:
+      - Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:GetItem
+          - dynamodb:Query
+          Resource:
+          - Fn::GetAtt:
+            - ReportingTable
+            - Arn
+          - Fn::Sub: ${ReportingTable.Arn}/index/*
+      - &id001
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:UpdateItem
+          Resource:
+          - Fn::GetAtt:
+            - JobsTable
+            - Arn
+      - Statement:
+        - Effect: Allow
+          Action:
+          - s3:GetObject
+          Resource:
+          - Fn::Sub: ${ExportBucket.Arn}/exports/*
+      Environment:
+        Variables:
+          EXPORT_BUCKET:
+            Ref: ExportBucket
+      Events:
+        Request:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: ExportApi
+            Path: /reports/{propertyId}/exports
+            Method: POST
+        Status:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: ExportApi
+            Path: /exports/{jobId}
+            Method: GET
+        Download:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: ExportApi
+            Path: /exports/{jobId}/download
+            Method: GET
+      AutoPublishCodeSha256: &id002
+        Ref: ReleaseId
+  ExportApiFunctionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${ExportApiFunction}
+      RetentionInDays: 14
+  ExportApiFunctionErrors:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+      - Name: FunctionName
+        Value:
+          Ref: ExportApiFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+      - Ref: Alerts
+  OutboxDispatcherFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dev.catfi.functions.OutboxDispatcherHandler::handleRequest
+      Policies:
+      - *id001
+      - Statement:
+        - Effect: Allow
+          Action:
+          - sqs:SendMessage
+          Resource:
+          - Fn::GetAtt:
+            - ExportQueue
+            - Arn
+          - Fn::GetAtt:
+            - StreamDLQ
+            - Arn
+      Environment:
+        Variables:
+          EXPORT_QUEUE_URL:
+            Ref: ExportQueue
+      Events:
+        Outbox:
+          Type: DynamoDB
+          Properties:
+            Stream:
+              Fn::GetAtt:
+              - JobsTable
+              - StreamArn
+            StartingPosition: TRIM_HORIZON
+            BatchSize: 10
+            BisectBatchOnFunctionError: true
+            MaximumRetryAttempts: 5
+            DestinationConfig:
+              OnFailure:
+                Type: SQS
+                Destination:
+                  Fn::GetAtt:
+                  - StreamDLQ
+                  - Arn
+            FilterCriteria:
+              Filters:
+              - Pattern: '{"eventName":["INSERT"],"dynamodb":{"NewImage":{"pk":{"S":[{"prefix":"OUTBOX#"}]}}}}'
+      AutoPublishCodeSha256: *id002
+  OutboxDispatcherFunctionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${OutboxDispatcherFunction}
+      RetentionInDays: 14
+  OutboxDispatcherFunctionErrors:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+      - Name: FunctionName
+        Value:
+          Ref: OutboxDispatcherFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+      - Ref: Alerts
+  ExportWorkflowFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dev.catfi.functions.ExportWorkflowHandler::handleRequest
+      Policies:
+      - *id001
+      - Statement:
+        - Effect: Allow
+          Action:
+          - s3:PutObject
+          Resource:
+          - Fn::Sub: ${ExportBucket.Arn}/exports/*
+      Environment:
+        Variables:
+          EXPORT_BUCKET:
+            Ref: ExportBucket
+      AutoPublishCodeSha256: *id002
+  ExportWorkflowFunctionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${ExportWorkflowFunction}
+      RetentionInDays: 14
+  ExportWorkflowFunctionErrors:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+      - Name: FunctionName
+        Value:
+          Ref: ExportWorkflowFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+      - Ref: Alerts
+  ReportExporterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dev.catfi.functions.ReportExporterHandler::handleRequest
+      Policies:
+      - Statement:
+        - Effect: Allow
+          Action:
+          - states:StartExecution
+          Resource:
+          - Ref: ExportWorkflow
+      Environment:
+        Variables:
+          WORKFLOW_ARN:
+            Ref: ExportWorkflow
+      Events:
+        Jobs:
+          Type: SQS
+          Properties:
+            Queue:
+              Fn::GetAtt:
+              - ExportQueue
+              - Arn
+            BatchSize: 10
+            FunctionResponseTypes:
+            - ReportBatchItemFailures
+            ScalingConfig:
+              MaximumConcurrency: 2
+      AutoPublishCodeSha256: *id002
+  ReportExporterFunctionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${ReportExporterFunction}
+      RetentionInDays: 14
+  ReportExporterFunctionErrors:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+      - Name: FunctionName
+        Value:
+          Ref: ReportExporterFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+      - Ref: Alerts
+  ReportNotifierFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dev.catfi.functions.ReportNotifierHandler::handleRequest
+      Policies:
+      - *id001
+      - Statement:
+        - Effect: Allow
+          Action:
+          - ses:SendEmail
+          Resource:
+          - Fn::Sub: arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${EmailFrom}
+      - Statement:
+        - Effect: Allow
+          Action:
+          - sqs:SendMessage
+          Resource:
+          - Fn::GetAtt:
+            - StreamDLQ
+            - Arn
+      Environment:
+        Variables:
+          EMAIL_FROM:
+            Ref: EmailFrom
+          EMAIL_TO:
+            Ref: EmailTo
+      Events:
+        Reports:
+          Type: DynamoDB
+          Properties:
+            Stream:
+              Fn::GetAtt:
+              - ReportingTable
+              - StreamArn
+            StartingPosition: LATEST
+            BatchSize: 10
+            BisectBatchOnFunctionError: true
+            MaximumRetryAttempts: 5
+            DestinationConfig:
+              OnFailure:
+                Type: SQS
+                Destination:
+                  Fn::GetAtt:
+                  - StreamDLQ
+                  - Arn
+            FilterCriteria:
+              Filters:
+              - Pattern: '{"eventName":["INSERT","MODIFY"],"dynamodb":{"NewImage":{"status":{"S":["REPORTED"]}}}}'
+      AutoPublishCodeSha256: *id002
+    Condition: MailEnabled
+  ReportNotifierFunctionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${ReportNotifierFunction}
+      RetentionInDays: 14
+    Condition: MailEnabled
+  ReportNotifierFunctionErrors:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+      - Name: FunctionName
+        Value:
+          Ref: ReportNotifierFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+      - Ref: Alerts
+    Condition: MailEnabled
+  WeatherUpdaterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: dev.catfi.functions.WeatherUpdaterHandler::handleRequest
+      Policies:
+      - Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          Resource:
+          - Fn::GetAtt:
+            - WeatherTable
+            - Arn
+      - Statement:
+        - Effect: Allow
+          Action:
+          - secretsmanager:GetSecretValue
+          Resource:
+          - Ref: WeatherSecret
+      - Statement:
+        - Effect: Allow
+          Action:
+          - sqs:SendMessage
+          Resource:
+          - Fn::GetAtt:
+            - SchedulerDLQ
+            - Arn
+      Environment:
+        Variables:
+          WEATHER_TABLE:
+            Ref: WeatherTable
+          WEATHER_SECRET_ARN:
+            Ref: WeatherSecret
+      Events:
+        Refresh:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: rate(10 minutes)
+            State:
+              Fn::If:
+              - WeatherEnabled
+              - ENABLED
+              - DISABLED
+            Input: '{"region":"Tokyo"}'
+            RetryPolicy:
+              MaximumRetryAttempts: 2
+              MaximumEventAgeInSeconds: 900
+            DeadLetterConfig:
+              Arn:
+                Fn::GetAtt:
+                - SchedulerDLQ
+                - Arn
+      EventInvokeConfig:
+        MaximumRetryAttempts: 2
+        DestinationConfig:
+          OnFailure:
+            Type: SQS
+            Destination:
+              Fn::GetAtt:
+              - SchedulerDLQ
+              - Arn
+      AutoPublishCodeSha256: *id002
+  WeatherUpdaterFunctionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${WeatherUpdaterFunction}
+      RetentionInDays: 14
+  WeatherUpdaterFunctionErrors:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+      - Name: FunctionName
+        Value:
+          Ref: WeatherUpdaterFunction
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+      - Ref: Alerts
+  WorkflowLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+  ExportWorkflow:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Type: STANDARD
+      Definition:
+        StartAt: Generate
+        TimeoutSeconds: 600
+        States:
+          Generate:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: ${TaskArn}
+              Payload:
+                jobId.$: $.jobId
+                operation: generate
+            ResultSelector:
+              objectKey.$: $.Payload.objectKey
+            ResultPath: $.file
+            Retry: &id003
+            - ErrorEquals:
+              - States.TaskFailed
+              IntervalSeconds: 2
+              BackoffRate: 2
+              MaxAttempts: 3
+            Catch:
+            - ErrorEquals:
+              - States.ALL
+              ResultPath: $.failure
+              Next: MarkFailed
+            Next: Complete
+          Complete:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: ${TaskArn}
+              Payload:
+                jobId.$: $.jobId
+                objectKey.$: $.file.objectKey
+                operation: complete
+            ResultPath: $.result
+            Retry: *id003
+            Catch:
+            - ErrorEquals:
+              - States.ALL
+              ResultPath: $.failure
+              Next: MarkFailed
+            Next: Done
+          MarkFailed:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: ${TaskArn}
+              Payload:
+                jobId.$: $.jobId
+                operation: fail
+            ResultPath: $.failureResult
+            Retry: *id003
+            Next: Failed
+          Failed:
+            Type: Fail
+            Error: ExportFailed
+          Done:
+            Type: Succeed
+      DefinitionSubstitutions:
+        TaskArn:
+          Ref: ExportWorkflowFunction.Alias
+      Policies:
+      - LambdaInvokePolicy:
+          FunctionName:
+            Ref: ExportWorkflowFunction
+      - Statement:
+        - Effect: Allow
+          Action:
+          - lambda:InvokeFunction
+          Resource:
+          - Fn::Sub: ${ExportWorkflowFunction.Arn}:*
+      - Statement:
+        - Effect: Allow
+          Action:
+          - logs:CreateLogDelivery
+          - logs:GetLogDelivery
+          - logs:UpdateLogDelivery
+          - logs:DeleteLogDelivery
+          - logs:ListLogDeliveries
+          - logs:PutResourcePolicy
+          - logs:DescribeResourcePolicies
+          - logs:DescribeLogGroups
+          Resource:
+          - '*'
+      Logging:
+        Destinations:
+        - CloudWatchLogsLogGroup:
+            LogGroupArn:
+              Fn::GetAtt:
+              - WorkflowLogs
+              - Arn
+        IncludeExecutionData: false
+        Level: ERROR
+  ExportDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+      - Name: QueueName
+        Value:
+          Fn::GetAtt:
+          - ExportDLQ
+          - QueueName
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+      - Ref: Alerts
+  StreamDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+      - Name: QueueName
+        Value:
+          Fn::GetAtt:
+          - StreamDLQ
+          - QueueName
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+      - Ref: Alerts
+  SchedulerDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+      - Name: QueueName
+        Value:
+          Fn::GetAtt:
+          - SchedulerDLQ
+          - QueueName
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+      - Ref: Alerts
+  WorkflowFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/States
+      MetricName: ExecutionsFailed
+      Dimensions:
+      - Name: StateMachineArn
+        Value:
+          Ref: ExportWorkflow
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+      - Ref: Alerts
+Outputs:
+  ApiUrl:
+    Value:
+      Fn::Sub: https://${ExportApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+  ReportingTable:
+    Value:
+      Ref: ReportingTable
+  JobsTable:
+    Value:
+      Ref: JobsTable
+  ExportBucket:
+    Value:
+      Ref: ExportBucket
+  ExportQueueUrl:
+    Value:
+      Ref: ExportQueue
+  ExportDLQUrl:
+    Value:
+      Ref: ExportDLQ
+  StreamDLQUrl:
+    Value:
+      Ref: StreamDLQ
+  WeatherTable:
+    Value:
+      Ref: WeatherTable
+  WeatherSecretArn:
+    Value:
+      Ref: WeatherSecret
+  UserPoolId:
+    Value:
+      Ref: UserPool
+  UserPoolClientId:
+    Value:
+      Ref: UserPoolClient
+  WorkflowArn:
+    Value:
+      Ref: ExportWorkflow
+  AlertsArn:
+    Value:
+      Ref: Alerts

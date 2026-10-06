@@ -26,4 +26,22 @@ public class ReportingController {
   public Collection<PropertyFullReport> getAllReports() {
     return reportingService.getAllReports().values();
   }
+  public record ReportPage(java.util.List<PropertyFullReport> items,String cursor) {}
+
+  @GetMapping("/page")
+  public ReportPage page(@RequestParam(required=false) String cursor,
+      @RequestParam(defaultValue="50") int limit) {
+    try {
+      var page=reportingService.page(cursor,limit);
+      return new ReportPage(page.items().stream().map(d->dev.catfi.aws.Json.read(d.reportJson(),PropertyFullReport.class))
+          .filter(java.util.Objects::nonNull).toList(),page.cursor());
+    }
+    catch(IllegalArgumentException e) { throw new org.springframework.web.server.ResponseStatusException(
+        org.springframework.http.HttpStatus.BAD_REQUEST,"Invalid pagination"); }
+  }
+
+  @GetMapping("/property/{propertyId}/history")
+  public java.util.List<PropertyFullReport> history(@PathVariable UUID propertyId) {
+    return reportingService.history(propertyId);
+  }
 }

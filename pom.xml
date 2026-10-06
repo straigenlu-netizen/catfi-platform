@@ -15,6 +15,8 @@
   <properties>
     <java.version>21</java.version>
     <spring-cloud.version>2025.0.3</spring-cloud.version>
+    <aws-sdk.version>2.31.68</aws-sdk.version>
+    <argLine />
   </properties>
   <modules>
     <module>services/catfi-bff</module>
@@ -33,6 +35,8 @@
     <module>services/sensor-simulator</module>
     <module>services/user-service</module>
     <module>services/weather-service</module>
+    <module>services/catfi-aws-core</module>
+    <module>services/aws-functions</module>
   </modules>
   <build>
     <plugins>
@@ -76,8 +80,29 @@
             <exclude>**/*IntegrationTest.java</exclude>
             <exclude>**/*EndToEndTest.java</exclude>
           </excludes>
-          <argLine>"-javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar"</argLine>
+          <argLine>@{argLine} "-javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar"</argLine>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.13</version>
+        <executions>
+          <execution>
+            <id>coverage-agent</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>coverage-report</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
     <pluginManagement>
@@ -107,6 +132,13 @@
         <scope>import</scope>
         <type>pom</type>
       </dependency>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>bom</artifactId>
+        <version>${aws-sdk.version}</version>
+        <scope>import</scope>
+        <type>pom</type>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <profiles>
@@ -123,7 +155,7 @@
                 <include>**/*IntegrationTest.java</include>
                 <include>**/*EndToEndTest.java</include>
               </includes>
-              <argLine>"-javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar"</argLine>
+              <argLine>@{argLine} "-javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar"</argLine>
             </configuration>
             <executions>
               <execution>

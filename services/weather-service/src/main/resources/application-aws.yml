@@ -1,0 +1,5 @@
+catfi:
+  weather:
+    storage: dynamodb
+  aws:
+    weather-table: ${CATFI_WEATHER_TABLE:catfi-dev-weather}

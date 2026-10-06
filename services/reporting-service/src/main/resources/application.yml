@@ -17,3 +17,9 @@ spring:
 logging:
   level:
     dev.catfi.reporting: DEBUG
+
+catfi:
+  reporting:
+    storage: ${CATFI_REPORTING_STORAGE:memory}
+  aws:
+    reporting-table: ${CATFI_REPORTING_TABLE:catfi-dev-reporting}

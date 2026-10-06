@@ -1,0 +1,279 @@
+{
+  "surefire": {
+    "totals": {
+      "tests": 114,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suites": [
+      {
+        "suite": "dev.catfi.functions.LambdaHandlersTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.aws.ExportServiceTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.bff.adapter.web.UiControllerTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.bff.application.UiAggregationServiceTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.common.domain.CompensationTermsTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.common.domain.EventJsonContractTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.compensation.adapter.kafka.CompensationEventProcessorTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.compensation.adapter.web.CompensationControllerTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.compensation.application.CompensationApplicationServiceTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.compensation.application.CompensationSplitTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.compensation.domain.CompensationCalculatorTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.damage.adapter.kafka.DamageEventProcessorTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.damage.application.DamageCalculationServiceTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.disaster.DisasterSimulationServiceTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.disaster.adapter.kafka.DisasterEventPublisherTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.disaster.adapter.web.SimulationControllerTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.e2e.FinancialPipelineTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.e2e.PolicyHttpContractTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.investment.adapter.kafka.InvestmentEventProcessorTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.investment.application.InvestmentServiceTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.market.application.MarketDataServiceTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.shock.adapter.kafka.MarketShockProcessorTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.shock.application.MarketShockServiceTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.payment.adapter.kafka.PaymentEventProcessorTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.payment.application.PaymentServiceTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.portfolio.adapter.kafka.PortfolioEventProcessorTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.portfolio.application.PortfolioServiceTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.policy.application.PolicyServiceTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.reporting.adapter.kafka.ReportingEventProcessorTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.reporting.application.DurableReportingTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.sensor.adapter.kafka.SensorEventProcessorTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.sensor.application.SensorSimulationServiceTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.user.application.UserServiceTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.weather.adapter.WeatherControllerTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.weather.application.WeatherServiceTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.weather.config.AwsWeatherConfigurationTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.weather.domain.WindSpeedConverterTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      }
+    ]
+  },
+  "failsafe": {
+    "totals": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "suites": [
+      {
+        "suite": "dev.catfi.damage.infrastructure.DamageKafkaIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.e2e.DynamoReportingIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "suite": "dev.catfi.e2e.PipelineKafkaIT",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0
+      }
+    ]
+  },
+  "date": "2026-10-06",
+  "java": "21.0.12.1",
+  "maven": "3.9.11",
+  "frontend_unit": {
+    "passed": 7,
+    "failed": 0
+  },
+  "browser": {
+    "mocked_control_room": 3,
+    "mocked_export_contract": 1,
+    "live_http_kafka": 1
+  },
+  "not_executed": [
+    "PostgreSQL DatabaseMigrationIT (Docker unavailable)",
+    "Real AWS cloud_e2e.py (account not connected)",
+    "GitHub-hosted workflow execution (repository not connected)"
+  ]
+}

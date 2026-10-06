@@ -19,3 +19,7 @@ Run with the integration Maven profile. This test does not prove PostgreSQL migr
 ## Verification and operation
 
 Build and run commands, service ports and environment variables are maintained in the [platform README](../../README.md). Test scope and remaining limitations are maintained in [VALIDATION.md](../../VALIDATION.md) and [REVIEW.md](../../REVIEW.md). Update this page when the service behavior or dependencies change.
+
+## AWS adapter verification
+
+DynamoReportingIT uses a real DynamoDB Local endpoint from CATFI_DYNAMODB_ENDPOINT, tests conditional competing writers, persistence across service instances, transactional job/outbox creation and deterministic export completion. Without the endpoint this test is explicitly skipped. GitHub CI provisions DynamoDB Local. Cloud JWT/SQS/Step Functions/S3 verification is separate in scripts/aws/cloud_e2e.py and runs after AWS deployment. PostgreSQL migration integration tests still require Docker.

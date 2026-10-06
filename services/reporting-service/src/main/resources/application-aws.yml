@@ -1,0 +1,9 @@
+spring:
+  kafka:
+    consumer:
+      enable-auto-commit: false
+    listener:
+      ack-mode: record
+catfi:
+  reporting:
+    storage: dynamodb

@@ -2,7 +2,7 @@
 
 An educational disaster recovery platform for Japan: synthetic properties and clients, simulated insurance compensation, payouts and investment allocations. The control room makes the asynchronous pipeline visible and lets you trigger a disaster manually.
 
-**Current state:** all 17 Maven reactor projects build; the BFF, React UI and Kafka demo flow are implemented. Current verification results and runtime limits are in [VALIDATION.md](VALIDATION.md). Last updated: 2026-10-05.
+**Current state:** all 19 Maven reactor projects build; the BFF, React UI and Kafka demo flow are implemented. Current verification results and runtime limits are in [VALIDATION.md](VALIDATION.md). Last updated: 2026-10-06.
 
 ## Product experience
 
@@ -32,7 +32,7 @@ Open **http://localhost:5173**. The demo profile seeds three Tokyo properties an
 
 Backend applications share the `catfi-backend:local` image built by `catfi-bff`. Only the UI and BFF publish HTTP ports; internal service endpoints are not published to the host. Infrastructure ports bind to loopback. This is a local demo, with no production BFF authentication.
 
-Existing PostgreSQL volumes are preserved. Initialization scripts run only for a fresh volume. If an older volume predates the three demo databases, create the missing databases in PostgreSQL; do not delete an existing volume to repair configuration. See [DEVELOPMENT.md](DEVELOPMENT.md).
+Existing PostgreSQL volumes are preserved. Initialization scripts run only for a fresh volume. If an older volume predates the three demo databases, create the missing databases in PostgreSQL; do not delete an existing volume to repair configuration.
 
 Weather and market services are optional:
 
@@ -51,7 +51,7 @@ Java 21 and Maven Wrapper 3.9.11; Node.js 24 for frontend development.
 .\mvnw.cmd verify -Pintegration
 ```
 
-The first command runs 99 Java unit, web and component tests without Docker. The integration profile includes embedded Kafka tests and PostgreSQL Testcontainers, so the full profile requires Docker.
+The first command runs Java unit, web and component tests (see VALIDATION.md for current counts) without Docker. The integration profile includes embedded Kafka tests and PostgreSQL Testcontainers, so the full profile requires Docker.
 
 ```powershell
 cd web-ui
@@ -80,26 +80,36 @@ Vite proxies `/api/ui` to the BFF on port 8087. Browser tests use deterministic 
 | payment-service | Simulated completed payout using `amountToPay` |
 | investment-service | Owner risk lookup and asset allocation using `amountToInvest` |
 | portfolio-service | Position quantities and accumulated weighted purchase prices |
-| reporting-service | Correlated in-memory read model for current property reports |
+| reporting-service | Correlated reporting with memory or durable DynamoDB storage |
 | market-data-service | Simulated price snapshots |
 | market-shock-service | Explicit disaster shock coefficients |
-| weather-service | Metric OpenWeather mapping, bounded calls and sanitized provider errors |
-| e2e-tests | Financial/HTTP contract tests and a Kafka pipeline integration test |
+| weather-service | OpenWeather mapping or scheduled AWS cache, with expiry checks |
+| e2e-tests | Financial/HTTP/Kafka and durable DynamoDB integration tests |
+| catfi-aws-core | Reporting/export ports, application services and AWS SDK adapters |
+| aws-functions | Six standalone Java Lambda handlers for exports, notifications and weather |
 
-Blockchain anchoring, notifications, real market integrations, durable reporting, policy budget locking and inbox/outbox remain planned. The simulator currently applies observations to all registered properties; coordinates and intensity are retained but do not yet drive a geographic or physical model.
+Blockchain anchoring, real market integrations, policy budget locking and financial inbox/outbox remain planned. The AWS branch implements durable reporting, export outbox and optional notifications. The simulator currently applies observations to all registered properties; coordinates and intensity are retained but do not yet drive a geographic or physical model.
 
 ## Architecture and documentation
 
-Services separate domain models, application logic, adapters and configuration. Constructor injection and targeted Lombok annotations reduce boilerplate; no runtime Lombok is required. Shared domain contracts remain independent of Spring, JPA, Kafka and HTTP. PostgreSQL handles financial records, MongoDB handles damage assessments; policies, users and reports currently use memory.
+Services separate domain models, application logic, adapters and configuration. Constructor injection and targeted Lombok annotations reduce boilerplate; no runtime Lombok is required. Shared domain contracts remain independent of Spring, JPA, Kafka and HTTP. PostgreSQL handles financial records, MongoDB handles damage assessments; policies and users currently use memory; reporting has memory and DynamoDB adapters.
 
 - [ARCHITECTURE.md](ARCHITECTURE.md): boundaries and current integration flow.
 - [BUSINESS_RULES.md](BUSINESS_RULES.md): compensation, allocation and rounding.
 - [SECURITY.md](SECURITY.md): actual protection and remaining work.
-- [ROADMAP.md](ROADMAP.md): delivery stages.
+- [DECISIONS.md](DECISIONS.md): architectural decisions.
+- [REVIEW.md](REVIEW.md): corrections and known gaps from this review.
 - [VALIDATION.md](VALIDATION.md): executed checks and limitations.
+- [CHANGELOG.md](CHANGELOG.md): change history.
 
 This README is the living project overview. Update it in the same change whenever project behavior, services, setup or verification status changes. Keep history in CHANGELOG and decision rationale in DECISIONS. All project text remains English.
 
 ## Service responsibilities
 
 Every module under `services/` has an English README describing its role, processing, communications and limitations. These pages are living documentation and must be updated alongside behavior changes. There is currently no separate security-service; security is implemented at application boundaries.
+
+## AWS serverless implementation
+
+[Setup and implementation (Russian)](docs/aws/AWS_IMPLEMENTATION_RU.md) explains the implemented DynamoDB reporting adapter, authenticated JSON exports, six Java Lambda handlers, SQS/Step Functions/S3, scheduled weather cache, optional email notifications and GitHub OIDC deployment. [Original learning roadmap](docs/aws/AWS_TRAINING_PLAN_RU.md) distinguishes future advanced labs from this implementation.
+
+The standard local demo still uses memory reporting. AWS mode requires deployed resources and a local temporary-credentials profile or an application role. No AWS account credentials are stored in this archive. Infrastructure is in `infra/aws`; CI/deployment/security workflows are in `.github/workflows`. AWS deployment is manual after tests and account/repository configuration; cloud validation has not been executed here.

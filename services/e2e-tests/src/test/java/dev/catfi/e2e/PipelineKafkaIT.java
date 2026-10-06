@@ -287,7 +287,7 @@ class PipelineKafkaIT {
     assertThat(details.getStatusCode().value()).isEqualTo(200);
     assertThat(details.getBody().report().getPropertyId()).isEqualTo(PROPERTY);
     if (Boolean.getBoolean("catfi.browser.e2e")) {
-      var ui = java.nio.file.Path.of(System.getProperty("catfi.web-ui"));
+      var ui = java.nio.file.Path.of(System.getProperty("catfi.web-ui", "../../web-ui")).toAbsolutePath().normalize();
       java.util.List<String> command =
           System.getProperty("os.name").startsWith("Windows")
               ? java.util.List.of("cmd.exe", "/c", "npm", "run", "test:e2e")

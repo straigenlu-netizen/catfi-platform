@@ -1,0 +1,413 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'One-time administrator bootstrap: GitHub OIDC role, CloudFormation execution
+  role, artifacts and ECR.'
+Parameters:
+  GitHubRepository:
+    Type: String
+    AllowedPattern: '[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+'
+    Description: Exact owner/repository
+  StackPrefix:
+    Type: String
+    Default: catfi-dev
+    AllowedPattern: '[a-z][a-z0-9-]{2,30}'
+  ExistingOidcProviderArn:
+    Type: String
+    Default: ''
+Conditions:
+  CreateProvider:
+    Fn::Equals:
+    - Ref: ExistingOidcProviderArn
+    - ''
+Resources:
+  GitHubProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+      - sts.amazonaws.com
+  Artifacts:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+        - Id: Artifacts
+          Status: Enabled
+          ExpirationInDays: 30
+    UpdateReplacePolicy: Retain
+  BackendRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    Properties:
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: '{"rules":[{"rulePriority":1,"description":"Keep last
+          10 learning images","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}'
+    UpdateReplacePolicy: Retain
+  CloudFormationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: cloudformation.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: LearningStackProvisioning
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - lambda:CreateFunction
+            - lambda:UpdateFunctionCode
+            - lambda:UpdateFunctionConfiguration
+            - lambda:GetFunction
+            - lambda:GetFunctionConfiguration
+            - lambda:DeleteFunction
+            - lambda:PublishVersion
+            - lambda:CreateAlias
+            - lambda:UpdateAlias
+            - lambda:DeleteAlias
+            - lambda:GetAlias
+            - lambda:ListVersionsByFunction
+            - lambda:AddPermission
+            - lambda:RemovePermission
+            - lambda:TagResource
+            - lambda:UntagResource
+            - lambda:PutFunctionEventInvokeConfig
+            - lambda:DeleteFunctionEventInvokeConfig
+            - lambda:GetFunctionEventInvokeConfig
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${StackPrefix}-*
+          - Effect: Allow
+            Action:
+            - lambda:CreateEventSourceMapping
+            - lambda:UpdateEventSourceMapping
+            - lambda:GetEventSourceMapping
+            - lambda:DeleteEventSourceMapping
+            - lambda:ListEventSourceMappings
+            Resource:
+            - '*'
+          - Effect: Allow
+            Action:
+            - dynamodb:CreateTable
+            - dynamodb:DeleteTable
+            - dynamodb:DescribeTable
+            - dynamodb:UpdateTable
+            - dynamodb:DescribeTimeToLive
+            - dynamodb:UpdateTimeToLive
+            - dynamodb:DescribeContinuousBackups
+            - dynamodb:UpdateContinuousBackups
+            - dynamodb:TagResource
+            - dynamodb:UntagResource
+            - dynamodb:ListTagsOfResource
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${StackPrefix}-*
+          - Effect: Allow
+            Action:
+            - s3:CreateBucket
+            - s3:DeleteBucket
+            - s3:GetBucket*
+            - s3:PutBucket*
+            - s3:DeleteBucketPolicy
+            - s3:GetEncryptionConfiguration
+            - s3:PutEncryptionConfiguration
+            - s3:GetLifecycleConfiguration
+            - s3:PutLifecycleConfiguration
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:s3:::${StackPrefix}-*
+          - Effect: Allow
+            Action:
+            - sqs:CreateQueue
+            - sqs:DeleteQueue
+            - sqs:SetQueueAttributes
+            - sqs:GetQueueAttributes
+            - sqs:TagQueue
+            - sqs:UntagQueue
+            - sqs:GetQueueUrl
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:${StackPrefix}-*
+          - Effect: Allow
+            Action:
+            - sns:CreateTopic
+            - sns:DeleteTopic
+            - sns:GetTopicAttributes
+            - sns:SetTopicAttributes
+            - sns:Subscribe
+            - sns:Unsubscribe
+            - sns:GetSubscriptionAttributes
+            - sns:TagResource
+            - sns:UntagResource
+            - sns:ListTagsForResource
+            Resource:
+            - '*'
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:DeleteLogGroup
+            - logs:PutRetentionPolicy
+            - logs:DeleteRetentionPolicy
+            - logs:DescribeLogGroups
+            - logs:TagResource
+            - logs:UntagResource
+            - logs:ListTagsForResource
+            - logs:CreateLogDelivery
+            - logs:GetLogDelivery
+            - logs:UpdateLogDelivery
+            - logs:DeleteLogDelivery
+            - logs:ListLogDeliveries
+            - logs:PutResourcePolicy
+            - logs:DescribeResourcePolicies
+            Resource:
+            - '*'
+          - Effect: Allow
+            Action:
+            - cloudwatch:PutMetricAlarm
+            - cloudwatch:DeleteAlarms
+            - cloudwatch:DescribeAlarms
+            - cloudwatch:TagResource
+            - cloudwatch:UntagResource
+            Resource:
+            - '*'
+          - Effect: Allow
+            Action:
+            - states:CreateStateMachine
+            - states:DeleteStateMachine
+            - states:UpdateStateMachine
+            - states:DescribeStateMachine
+            - states:TagResource
+            - states:UntagResource
+            - states:ListTagsForResource
+            Resource:
+            - '*'
+          - Effect: Allow
+            Action:
+            - scheduler:CreateSchedule
+            - scheduler:UpdateSchedule
+            - scheduler:DeleteSchedule
+            - scheduler:GetSchedule
+            Resource:
+            - '*'
+          - Effect: Allow
+            Action:
+            - secretsmanager:CreateSecret
+            - secretsmanager:DescribeSecret
+            - secretsmanager:DeleteSecret
+            - secretsmanager:PutSecretValue
+            - secretsmanager:UpdateSecret
+            - secretsmanager:TagResource
+            - secretsmanager:UntagResource
+            - secretsmanager:GetResourcePolicy
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${StackPrefix}-*
+          - Effect: Allow
+            Action:
+            - cognito-idp:CreateUserPool
+            - cognito-idp:UpdateUserPool
+            - cognito-idp:DeleteUserPool
+            - cognito-idp:DescribeUserPool
+            - cognito-idp:CreateUserPoolClient
+            - cognito-idp:UpdateUserPoolClient
+            - cognito-idp:DeleteUserPoolClient
+            - cognito-idp:DescribeUserPoolClient
+            - cognito-idp:SetUserPoolMfaConfig
+            - cognito-idp:TagResource
+            - cognito-idp:UntagResource
+            Resource:
+            - '*'
+          - Effect: Allow
+            Action:
+            - apigateway:GET
+            - apigateway:POST
+            - apigateway:PUT
+            - apigateway:PATCH
+            - apigateway:DELETE
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}::/apis
+            - Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}::/apis/*
+          - Effect: Allow
+            Action:
+            - iam:CreateRole
+            - iam:GetRole
+            - iam:DeleteRole
+            - iam:PutRolePolicy
+            - iam:GetRolePolicy
+            - iam:DeleteRolePolicy
+            - iam:AttachRolePolicy
+            - iam:DetachRolePolicy
+            - iam:UpdateAssumeRolePolicy
+            - iam:TagRole
+            - iam:UntagRole
+            - iam:ListRoleTags
+            - iam:ListAttachedRolePolicies
+            - iam:ListRolePolicies
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${StackPrefix}-*
+          - Effect: Allow
+            Action:
+            - iam:PassRole
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${StackPrefix}-*
+            Condition:
+              StringEquals:
+                iam:PassedToService:
+                - lambda.amazonaws.com
+                - states.amazonaws.com
+                - scheduler.amazonaws.com
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            Resource:
+            - Fn::Sub: ${Artifacts.Arn}/*
+  GitHubDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Federated:
+              Fn::If:
+              - CreateProvider
+              - Ref: GitHubProvider
+              - Ref: ExistingOidcProviderArn
+          Action: sts:AssumeRoleWithWebIdentity
+          Condition:
+            StringEquals:
+              token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              token.actions.githubusercontent.com:sub:
+                Fn::Sub: repo:${GitHubRepository}:environment:aws-dev
+      MaxSessionDuration: 3600
+      Policies:
+      - PolicyName: DeployAndSyntheticSmoke
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - cloudformation:CreateChangeSet
+            - cloudformation:DescribeChangeSet
+            - cloudformation:ExecuteChangeSet
+            - cloudformation:DeleteChangeSet
+            - cloudformation:DescribeStacks
+            - cloudformation:DescribeStackEvents
+            - cloudformation:GetTemplate
+            - cloudformation:ListStackResources
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${StackPrefix}/*
+          - Effect: Allow
+            Action:
+            - cloudformation:GetTemplateSummary
+            - cloudformation:ValidateTemplate
+            Resource:
+            - '*'
+          - Effect: Allow
+            Action:
+            - iam:PassRole
+            Resource:
+            - Fn::GetAtt:
+              - CloudFormationRole
+              - Arn
+            Condition:
+              StringEquals:
+                iam:PassedToService: cloudformation.amazonaws.com
+          - Effect: Allow
+            Action:
+            - s3:ListBucket
+            - s3:GetBucketLocation
+            Resource:
+            - Fn::GetAtt:
+              - Artifacts
+              - Arn
+          - Effect: Allow
+            Action:
+            - s3:PutObject
+            - s3:GetObject
+            Resource:
+            - Fn::Sub: ${Artifacts.Arn}/*
+          - Effect: Allow
+            Action:
+            - ecr:GetAuthorizationToken
+            Resource:
+            - '*'
+          - Effect: Allow
+            Action:
+            - ecr:DescribeImages
+            - ecr:BatchCheckLayerAvailability
+            - ecr:InitiateLayerUpload
+            - ecr:UploadLayerPart
+            - ecr:CompleteLayerUpload
+            - ecr:PutImage
+            Resource:
+            - Fn::GetAtt:
+              - BackendRepository
+              - Arn
+          - Effect: Allow
+            Action:
+            - sns:Publish
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${StackPrefix}-*
+          - Effect: Allow
+            Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:DeleteItem
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${StackPrefix}-*
+          - Effect: Allow
+            Action:
+            - cognito-idp:AdminCreateUser
+            - cognito-idp:AdminSetUserPassword
+            - cognito-idp:AdminDeleteUser
+            - cognito-idp:InitiateAuth
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/*
+            Condition:
+              StringEquals:
+                aws:ResourceTag/CatFi: learning
+          - Effect: Allow
+            Action:
+            - s3:ListBucketVersions
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:s3:::${StackPrefix}-*
+          - Effect: Allow
+            Action:
+            - s3:DeleteObject
+            - s3:DeleteObjectVersion
+            Resource:
+            - Fn::Sub: arn:${AWS::Partition}:s3:::${StackPrefix}-*/exports/*
+Outputs:
+  DeployRoleArn:
+    Value:
+      Fn::GetAtt:
+      - GitHubDeployRole
+      - Arn
+  CloudFormationRoleArn:
+    Value:
+      Fn::GetAtt:
+      - CloudFormationRole
+      - Arn
+  ArtifactBucket:
+    Value:
+      Ref: Artifacts
+  EcrRepositoryUri:
+    Value:
+      Fn::GetAtt:
+      - BackendRepository
+      - RepositoryUri

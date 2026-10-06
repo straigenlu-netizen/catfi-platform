@@ -1,0 +1,66 @@
+name: CatFi CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports: ['8000:8000']
+    env:
+      CATFI_DYNAMODB_ENDPOINT: http://localhost:8000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web-ui/package-lock.json
+      - run: npm ci
+        working-directory: web-ui
+      - run: npm test && npm run build
+        working-directory: web-ui
+      - run: npx playwright install --with-deps chromium
+        working-directory: web-ui
+      - run: npm run test:e2e
+        working-directory: web-ui
+      - name: AWS export browser contract
+        run: npm run test:e2e
+        working-directory: web-ui
+        env:
+          CATFI_E2E_EXPORT: '1'
+          VITE_EXPORT_API_URL: https://exports.example
+          VITE_COGNITO_REGION: eu-central-1
+          VITE_COGNITO_CLIENT_ID: test-client
+      - name: Unit, integration, DynamoDB adapter and real Kafka/browser tests
+        run: ./mvnw -B -ntp verify -Pintegration -Dcatfi.browser.e2e=true
+      - uses: aws-actions/setup-sam@v2
+      - name: Validate deployable AWS infrastructure
+        run: sam validate --lint --template-file infra/aws/template.yaml
+      - name: Dependency security audit
+        run: npm audit --omit=dev --audit-level=high
+        working-directory: web-ui
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            services/**/target/surefire-reports/
+            services/**/target/failsafe-reports/
+            web-ui/playwright-report/
+            web-ui/test-results/
+          retention-days: 7
