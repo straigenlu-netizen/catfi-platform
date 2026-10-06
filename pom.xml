@@ -29,6 +29,7 @@
     <module>services/market-data-service</module>
     <module>services/market-shock-service</module>
     <module>services/payment-service</module>
+    <module>services/performance-tests</module>
     <module>services/portfolio-service</module>
     <module>services/property-policy-service</module>
     <module>services/reporting-service</module>
