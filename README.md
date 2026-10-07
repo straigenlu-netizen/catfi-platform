@@ -70,7 +70,7 @@ Vite proxies `/api/ui` to the BFF on port 8087. Browser tests use deterministic 
 | Module | Current responsibility |
 | --- | --- |
 | catfi-common | Shared immutable contracts and monetary terms; constructor metadata supports JSON reading without runtime Lombok |
-| catfi-bff | OpenFeign aggregation, validated simulation proxy and CORS for local frontend origins |
+| catfi-bff | OpenFeign aggregation, validated simulation proxy, agent session authentication and PostgreSQL audit trail |
 | user-service | In-memory client profiles; demo clients |
 | property-policy-service | In-memory properties and active policies; demo fixtures and property APIs |
 | disaster-simulator | Manual REST event publication; scheduled simulation is opt-in |

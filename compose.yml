@@ -169,7 +169,11 @@ services:
     environment:
       <<: *backend-environment
       CATFI_SERVICE: catfi-bff
+      CATFI_DB_URL: jdbc:postgresql://compensation-db:5432/catfi_compensation
+      CATFI_DB_USER: ${CATFI_DB_USER:-catfi}
+      CATFI_DB_PASSWORD: ${CATFI_DB_PASSWORD:?Set CATFI_DB_PASSWORD in .env}
     depends_on:
+      compensation-db: {condition: service_healthy}
       user-service: {condition: service_started}
       property-policy-service: {condition: service_started}
       reporting-service: {condition: service_started}

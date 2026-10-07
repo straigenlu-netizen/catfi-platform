@@ -14,7 +14,7 @@ BFF uses names and risk profiles for the UI. Investment service retrieves the pr
 
 ## Important details
 
-No external identity provider. Unknown clients currently receive the legacy default moderate profile; do not interpret this as an authenticated identity. Customer persistence and authorization require further hardening.
+Employee/agent authentication is enforced at the BFF boundary and is intentionally separate from these customer profiles. No external identity provider. Unknown clients currently receive the legacy default moderate profile; do not interpret this as an authenticated identity. Customer persistence and authorization require further hardening.
 
 ## Verification and operation
 

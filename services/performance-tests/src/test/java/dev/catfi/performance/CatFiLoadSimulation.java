@@ -24,9 +24,14 @@ public class CatFiLoadSimulation extends Simulation {
     Duration duration = Duration.ofSeconds(DURATION_SECONDS);
     var httpProtocol = http.baseUrl(BASE_URL).acceptHeader("application/json").contentTypeHeader("application/json");
 
+    var login = exec(http("Agent login").post("/api/auth/login")
+        .formParam("username", "AgentCRM1").formParam("password", "agent_391")
+        .check(status().is(204)));
     var dashboard = scenario("dashboard-read")
+        .exec(login)
         .exec(http("GET dashboard").get("/api/ui/dashboard").check(status().is(200)));
     var disaster = scenario("disaster-write")
+        .exec(login)
         .exec(http("POST disaster simulation").post("/api/ui/trigger-disaster")
             .body(StringBody("{\"type\":\"EARTHQUAKE\",\"latitude\":35.6762,\"longitude\":139.6503,\"intensity\":6.0}"))
             .check(status().in(200, 202)));

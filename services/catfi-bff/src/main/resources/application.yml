@@ -1,10 +1,20 @@
 server:
   address: 127.0.0.1
   port: 8087
+  servlet:
+    session:
+      timeout: 10m
 
 spring:
   application:
     name: catfi-bff
+  sql:
+    init:
+      mode: always
+  datasource:
+    url: ${CATFI_DB_URL:jdbc:postgresql://localhost:5432/catfi_compensation}
+    username: ${CATFI_DB_USER:catfi}
+    password: ${CATFI_DB_PASSWORD:}
   cloud:
     openfeign:
       client:
@@ -12,3 +22,7 @@ spring:
           default:
             connectTimeout: 3000
             readTimeout: 5000
+
+catfi:
+  audit:
+    retention-days: 90

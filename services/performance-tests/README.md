@@ -8,6 +8,8 @@ A non-deployed Gatling module for repeatable HTTP load tests against a running C
 
 `CatFiLoadSimulation` uses an open workload model, so `rps` controls the arrival rate rather than a fixed number of simultaneous users. By default 95% of traffic reads `/api/ui/dashboard` and 5% triggers `/api/ui/trigger-disaster`, exercising the asynchronous Kafka pipeline behind the BFF.
 
+Each virtual user first authenticates as the local demo agent. The returned session cookie is reused by that virtual user, so the run includes authentication/session overhead and exercises audit persistence.
+
 ## Run
 
 Start the complete local demo first, then run:
