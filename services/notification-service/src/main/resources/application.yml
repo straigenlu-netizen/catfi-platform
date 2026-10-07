@@ -1,0 +1,22 @@
+server:
+  port: 8089
+spring:
+  application:
+    name: notification-service
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "dev.catfi.*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+catfi:
+  notification:
+    mail-mode: ${CATFI_NOTIFICATION_MAIL_MODE:log}
+    from: ${CATFI_NOTIFICATION_FROM:}
+    table: ${CATFI_NOTIFICATION_TABLE:catfi-dev-notifications}
+    retention-days: 90

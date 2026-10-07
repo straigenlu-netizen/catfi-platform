@@ -24,7 +24,12 @@ test("authenticated export follows job completion and clears session on logout",
     await page.getByLabel("Password").fill("test-password");
     await page.getByRole("button", { name: "Sign in for exports" }).click();
     await page.getByRole("button", { name: "Export JSON report" }).click();
-    await expect(page.getByRole("link", { name: /Download JSON/ })).toHaveAttribute("href", "https://bucket.s3.amazonaws.com/report.json");
+    await expect(page.getByRole("link", { name: /Download JSON/ })).toHaveAttribute(
+        "href",
+        "https://bucket.s3.amazonaws.com/report.json",
+        { timeout: 10000 },
+    );
+    expect(polls).toBeGreaterThanOrEqual(2);
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page.getByLabel("Password")).toHaveValue("");
     await expect(page.getByRole("link", { name: /Download JSON/ })).toHaveCount(0);

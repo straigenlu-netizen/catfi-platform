@@ -66,6 +66,8 @@ class EventJsonContractTest {
                 .reportGeneratedAt(time)
                 .build(),
             ClientProfile.builder().clientId(id).riskProfile(RiskProfile.MODERATE).build(),
+            ClaimEvent.builder().claimId(id).propertyId(id).clientId(id)
+                .status(ClaimStatus.SUBMITTED).occurredAt(time).build(),
             new CompensationTerms(
                 BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.ZERO));
     for (Object event : events)

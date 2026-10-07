@@ -30,6 +30,8 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+      - name: Make Maven Wrapper executable
+        run: chmod +x mvnw
       - name: OWASP Dependency-Check
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
@@ -48,7 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Scan dependencies, secrets and infrastructure configuration
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.32.0
         with:
           scan-type: fs
           scan-ref: .
@@ -65,7 +67,7 @@ jobs:
       - name: Build production-style backend image
         run: docker build -t catfi-security-scan:${{ github.sha }} .
       - name: Scan OS and application packages in the image
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.32.0
         with:
           image-ref: catfi-security-scan:${{ github.sha }}
           scanners: vuln,secret
@@ -87,6 +89,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Make Maven Wrapper executable
+        run: chmod +x mvnw
       - uses: github/codeql-action/init@v3
         with:
           languages: java-kotlin,javascript-typescript
@@ -104,6 +108,8 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+      - name: Make Maven Wrapper executable
+        run: chmod +x mvnw
       - name: Run tests and enforce configured Sonar quality gate
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

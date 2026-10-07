@@ -76,6 +76,16 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
     depends_on:
       kafka: {condition: service_healthy}
+  notification-service:
+    <<: *backend
+    environment:
+      <<: *backend-environment
+      CATFI_SERVICE: notification-service
+      CATFI_NOTIFICATION_MAIL_MODE: log
+    depends_on:
+      kafka: {condition: service_healthy}
+      property-policy-service: {condition: service_started}
+      user-service: {condition: service_started}
   user-service:
     <<: *backend
     environment:

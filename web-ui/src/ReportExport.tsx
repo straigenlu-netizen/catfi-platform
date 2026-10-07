@@ -61,10 +61,12 @@ export function ReportExport({ propertyId, ready, config = configured }: {
                     setUrl(body.url);
                     return;
                 }
-                if (++attempts >= 90) {
+                attempts++;
+                if (attempts >= 90) {
                     setError("Export is still processing. Try checking again later.");
-                    timer = setTimeout(() => void poll(), 2000);
+                    return;
                 }
+                timer = setTimeout(() => void poll(), 2000);
             } catch (e) {
                 if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "Export unavailable.");
             }

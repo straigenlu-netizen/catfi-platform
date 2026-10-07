@@ -1,0 +1,2 @@
+package dev.catfi.notification;
+public enum NotificationStage { CLAIM_SUBMITTED, CLAIM_IN_PROGRESS, COMPENSATION_CALCULATED, PAYMENT_COMPLETED, INVESTMENT_ALLOCATED }
