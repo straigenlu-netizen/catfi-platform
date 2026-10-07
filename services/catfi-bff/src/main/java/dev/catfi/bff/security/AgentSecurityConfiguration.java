@@ -50,11 +50,13 @@ public class AgentSecurityConfiguration {
             .addLogoutHandler((request, response, authentication) -> {
               if (authentication != null) {
                 audit.recordSecurity(authentication.getName(), "LOGOUT");
-                request.getSession(false).setAttribute("catfi.explicitLogout", Boolean.TRUE);
+                var session = request.getSession(false);
+                if (session != null) {
+                  session.setAttribute("catfi.explicitLogout", Boolean.TRUE);
+                }
               }
             })
-            .logoutSuccessHandler((request, response, authentication) -> response.setStatus(HttpServletResponse.SC_NO_CONTENT)))
-        .sessionManagement(session -> session.maximumSessions(1));
+            .logoutSuccessHandler((request, response, authentication) -> response.setStatus(HttpServletResponse.SC_NO_CONTENT)));
     return http.build();
   }
 }
