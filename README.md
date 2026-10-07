@@ -90,6 +90,8 @@ Vite proxies `/api/ui` to the BFF on port 8087. Browser tests use deterministic 
 
 Blockchain anchoring, real market integrations, policy budget locking and financial inbox/outbox remain planned. The AWS branch implements durable reporting, export outbox and optional notifications. The simulator currently applies observations to all registered properties; coordinates and intensity are retained but do not yet drive a geographic or physical model.
 
+Security CI now layers Gitleaks secret detection, OWASP Dependency-Check for Java CVEs, Trivy repository/IaC scanning and Trivy scanning of the built backend container. High/critical findings are intended to block the security workflow; CodeQL and Sonar remain optional repository-level extensions. `SECURITY.md` explains what each control protects, how to run local checks and what remains outside the guarantee.
+
 ## Architecture and documentation
 
 Services separate domain models, application logic, adapters and configuration. Constructor injection and targeted Lombok annotations reduce boilerplate; no runtime Lombok is required. Shared domain contracts remain independent of Spring, JPA, Kafka and HTTP. PostgreSQL handles financial records, MongoDB handles damage assessments; policies and users currently use memory; reporting has memory and DynamoDB adapters.
