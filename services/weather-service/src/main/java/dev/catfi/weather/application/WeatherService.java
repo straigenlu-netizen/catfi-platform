@@ -5,6 +5,7 @@ import dev.catfi.weather.domain.WeatherSnapshot;
 import java.time.Instant;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -27,9 +28,13 @@ public class WeatherService {
     this(client,apiKey);this.cache=cache.getIfAvailable();
   }
 
+  @Cacheable(cacheNames = "weather", key = "#city")
   public WeatherSnapshot getCurrentWeather(String city) {
     if (city == null || city.isBlank()) throw new IllegalArgumentException("City is required");
-    if(cache!=null)return cache.find(city).orElseThrow(()->new WeatherIntegrationException("Weather cache expired or unavailable",null));
+    if (cache != null) {
+      var cached = cache.find(city);
+      if (cached.isPresent()) return cached.get();
+    }
     if (apiKey == null || apiKey.isBlank())
       throw new WeatherIntegrationException("Weather provider is not configured", null);
     try {

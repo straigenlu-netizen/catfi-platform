@@ -4,6 +4,16 @@ server:
 spring:
   application:
     name: weather-service
+  cache:
+    type: redis
+    cache-names: weather
+    redis:
+      time-to-live: 5m
+      cache-null-values: false
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
   cloud:
     openfeign:
       client:
