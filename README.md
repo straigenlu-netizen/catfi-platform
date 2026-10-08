@@ -2,6 +2,19 @@
 
 An educational disaster recovery platform for Japan: synthetic properties and clients, simulated insurance compensation, payouts and investment allocations. The control room makes the asynchronous pipeline visible and lets you trigger a disaster manually.
 
+## Browser security hardening
+
+The agent UI uses a session cookie and session-backed CSRF validation for
+state-changing requests. The frontend calls `GET /api/auth/csrf` before
+publishing a disaster simulation, then sends the returned token in the
+`X-XSRF-TOKEN` request header. Anonymous users and users without `ROLE_AGENT`
+cannot access `/api/ui/**`. The CSRF endpoint requires authentication.
+
+Run `./mvnw -B -ntp -pl services/catfi-bff -am test` and
+`cd web-ui && npm test && npm run build` after applying the patch.
+This focused BFF change does not resolve Kafka/idempotency,
+payment consistency, or all public-deployment security concerns.
+
 ## Security CI
 
 The separate `Code security` workflow (`.github/workflows/security.yml`) runs on pushes,

@@ -46,6 +46,19 @@ export interface Trigger {
     longitude: number;
 }
 const client = axios.create({ baseURL: "/api/ui", timeout: 15000 });
+let csrfToken: string | undefined;
+const csrfClient = axios.create({ baseURL: "/api", timeout: 15000 });
+export async function prepareCsrf(): Promise<void> {
+    const response = await csrfClient.get<{ token: string }>("/auth/csrf");
+    csrfToken = response.data.token;
+}
+client.interceptors.request.use((config) => {
+    const method = config.method?.toUpperCase() ?? "GET";
+    if (!["GET", "HEAD", "OPTIONS", "TRACE"].includes(method) && csrfToken) {
+        config.headers.set("X-XSRF-TOKEN", csrfToken);
+    }
+    return config;
+});
 export const api = {
     dashboard: async () =>
         (await client.get<DashboardRow[]>("/dashboard")).data,

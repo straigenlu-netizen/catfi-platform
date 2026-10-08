@@ -1,12 +1,9 @@
 package dev.catfi.bff.security;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,7 +26,7 @@ public class AgentSecurityConfiguration {
 
   @Bean
   SecurityFilterChain securityFilterChain(HttpSecurity http, AuditService audit) throws Exception {
-    http.csrf(csrf -> csrf.disable())
+    http.csrf(csrf -> {})
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/api/auth/login").permitAll()
             .requestMatchers("/api/ui/**").hasRole("AGENT")

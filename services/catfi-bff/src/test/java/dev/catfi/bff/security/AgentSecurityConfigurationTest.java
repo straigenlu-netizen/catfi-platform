@@ -2,7 +2,9 @@ package dev.catfi.bff.security;
 
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 
@@ -40,5 +42,44 @@ class AgentSecurityConfigurationTest {
     mvc.perform(get("/api/ui/dashboard")
             .with(user("AgentCRM1").roles("AGENT")))
         .andExpect(status().isOk());
+  }
+  @Test
+  void shouldRejectAnonymousSimulationRequest() throws Exception {
+    mvc.perform(post("/api/ui/trigger-disaster").with(csrf()))
+        .andExpect(status().is3xxRedirection());
+    verifyNoInteractions(service);
+  }
+
+  @Test
+  void shouldRejectAgentSimulationWithoutCsrf() throws Exception {
+    mvc.perform(post("/api/ui/trigger-disaster")
+            .with(user("AgentCRM1").roles("AGENT")))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(service);
+  }
+
+  @Test
+  void shouldRejectAgentSimulationWithInvalidCsrf() throws Exception {
+    mvc.perform(post("/api/ui/trigger-disaster")
+            .with(user("AgentCRM1").roles("AGENT"))
+            .with(csrf().useInvalidToken()))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(service);
+  }
+
+  @Test
+  void shouldRejectNonAgentDashboardAccess() throws Exception {
+    mvc.perform(get("/api/ui/dashboard").with(user("customer").roles("CUSTOMER")))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(service);
+  }
+
+  @Test
+  void shouldRejectNonAgentSimulationWithCsrf() throws Exception {
+    mvc.perform(post("/api/ui/trigger-disaster")
+            .with(user("customer").roles("CUSTOMER"))
+            .with(csrf()))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(service);
   }
 }
