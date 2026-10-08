@@ -50,7 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Scan dependencies, secrets and infrastructure configuration
-        uses: aquasecurity/trivy-action@0.32.0
+        uses: aquasecurity/trivy-action@v0.32.0
         with:
           scan-type: fs
           scan-ref: .
@@ -67,7 +67,7 @@ jobs:
       - name: Build production-style backend image
         run: docker build -t catfi-security-scan:${{ github.sha }} .
       - name: Scan OS and application packages in the image
-        uses: aquasecurity/trivy-action@0.32.0
+        uses: aquasecurity/trivy-action@v0.32.0
         with:
           image-ref: catfi-security-scan:${{ github.sha }}
           scanners: vuln,secret

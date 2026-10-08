@@ -2,6 +2,29 @@
 
 An educational disaster recovery platform for Japan: synthetic properties and clients, simulated insurance compensation, payouts and investment allocations. The control room makes the asynchronous pipeline visible and lets you trigger a disaster manually.
 
+## Security CI
+
+The separate `Code security` workflow (`.github/workflows/security.yml`) runs on pushes,
+pull requests, manual dispatch and Mondays at 07:00 UTC. It checks Git history with
+Gitleaks, Java dependencies with OWASP Dependency-Check, the repository/IaC with
+Trivy, and the built container image with Trivy. HIGH and CRITICAL findings in
+Trivy fail their respective jobs; Java dependencies fail at CVSS 7 or above.
+
+CodeQL and Sonar are **opt-in**: set repository variables
+`CATFI_ENABLE_CODEQL=true` (only when GitHub Code Security is available)
+and `CATFI_ENABLE_SONAR=true` after configuring `SONAR_TOKEN` (secret),
+`SONAR_HOST_URL`, `SONAR_PROJECT_KEY`, and `SONAR_ORGANIZATION` (variables).
+Configure the `NVD_API_KEY` secret for more reliable OWASP NVD updates.
+An intentionally skipped job is **not** evidence of a completed scan.
+
+Before a public deployment, review every security finding, validate
+authentication and authorization separately, and use synthetic demo data.
+Run the workflow regression check locally:
+
+```bash
+python -m unittest discover -s tests -p 'test_security_workflow.py'
+```
+
 **Current state:** all 19 Maven reactor projects build; the BFF, React UI and Kafka demo flow are implemented. Current verification results and runtime limits are in [VALIDATION.md](VALIDATION.md). Last updated: 2026-10-06.
 
 ## Product experience
