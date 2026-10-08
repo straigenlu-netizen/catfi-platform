@@ -1,0 +1,166 @@
+import { useSyncExternalStore } from "react";
+
+export type Language = "en" | "ja";
+const STORAGE_KEY = "catfi.language";
+const japanese: Record<string, string> = {
+    "Portfolio overview": "ポートフォリオ概要",
+    "Your control room": "管理ダッシュボード",
+    "Follow every property, from impact to recovery.": "被災から復旧まで、すべての物件を追跡します。",
+    "New simulation": "新しいシミュレーション",
+    "Monitored properties": "監視対象物件",
+    "Registered in the policy service": "保険契約サービスの登録物件",
+    "Assessed damage": "被害査定額",
+    "Latest assessments across properties": "全物件の最新査定額",
+    "Calculated coverage": "保険補償額",
+    "After deductibles and policy limits": "免責額と補償上限を適用",
+    "Simulated payout": "模擬支払額",
+    "Completed customer payments": "顧客への支払完了額",
+    "Property watchlist": "物件一覧",
+    "Updates every 2 seconds": "2秒ごとに更新",
+    "Refresh": "更新",
+    "Property": "物件",
+    "Owner & strategy": "所有者・運用方針",
+    "Status": "状態",
+    "Damage": "被害額",
+    "Coverage": "補償額",
+    "Registered property · Japan": "登録物件・日本",
+    "No properties yet. Start the policy service with its": "物件がありません。保険契約サービスを",
+    "demo profile.": "デモ設定で起動してください。",
+    "Synthetic clients. Simulated money. A learning environment for": "架空の顧客と模擬資金を使用しています。",
+    "disaster recovery.": "災害復旧の学習環境です。",
+    "Scenario lab": "シナリオ検証",
+    "Start a simulation": "シミュレーション開始",
+    "One event. An entire recovery pipeline.": "一つのイベントから復旧プロセス全体へ。",
+    "Simulation environment": "シミュレーション環境",
+    "Disaster parameters": "災害パラメータ",
+    "Create a synthetic event and publish it to the platform.": "模擬イベントを作成してシステムに送信します。",
+    "Disaster type": "災害の種類",
+    "Intensity": "強度",
+    "Relative simulation scale, 0–10": "相対的な強度（0～10）",
+    "Latitude": "緯度",
+    "Longitude": "経度",
+    "Enter valid intensity and coordinates.": "有効な強度と座標を入力してください。",
+    "The event could not be published. Check the": "イベントを送信できませんでした。",
+    "BFF, simulator and Kafka, then retry.": "BFF、シミュレーター、Kafkaを確認して再試行してください。",
+    "Event published.": "イベントを送信しました。",
+    "Watch the dashboard": "ダッシュボードを確認",
+    "as reports arrive.": "して、レポートの更新を確認してください。",
+    "Event ID:": "イベントID：",
+    "Publishing event…": "送信中…",
+    "Run simulation": "シミュレーション実行",
+    "What happens next": "処理の流れ",
+    "From impact": "被災から",
+    "to insight.": "分析まで。",
+    "The platform generates sensor observations, assesses": "システムはセンサーデータを生成し、",
+    "damage and applies the property’s policy. Compensation": "被害を査定して保険契約を適用します。補償金は",
+    "is split into a simulated payout and investments.": "模擬支払と投資に配分されます。",
+    "Disaster event": "災害イベント",
+    "Sensor observations": "センサー観測",
+    "Damage assessment": "被害査定",
+    "Compensation & allocation": "補償と配分",
+    "Financial report": "財務レポート",
+    "Current demo: all registered properties receive": "現在のデモでは、登録済みの全物件が",
+    "observations. Location and intensity are retained as": "観測対象となります。位置と強度は",
+    "event metadata; geographic and physical damage models": "イベント情報として保存されます。",
+    "are planned.": "地理・物理被害モデルは今後の予定です。",
+    "Back to dashboard": "ダッシュボードに戻る",
+    "Property intelligence": "物件情報",
+    "Japan": "日本",
+    "Latest disaster assessment": "最新の被害査定",
+    "Compensation under the active policy": "有効な契約に基づく補償額",
+    "Amount paid to the customer": "顧客への支払額",
+    "Investment allocation": "投資配分",
+    "strategy": "運用方針",
+    "No disaster report yet. Run a simulation to see the": "災害レポートはまだありません。シミュレーションを実行すると",
+    "financial breakdown.": "財務内訳が表示されます。",
+    "Impact & recovery": "被害と復旧",
+    "Damage, policy compensation and customer payout in EUR": "被害額、保険補償額、顧客への支払額（EUR）",
+    "Policy at a glance": "保険契約の概要",
+    "Coverage rate": "補償率",
+    "Deductible": "免責額",
+    "Policy limit": "補償上限",
+    "Property value": "物件評価額",
+    "No active policy is available.": "有効な保険契約がありません。",
+    "Investment breakdown": "投資内訳",
+    "Allocated amounts, not current market valuations": "配分額であり、現在の市場評価額ではありません",
+    "Investment allocations will appear after processing": "処理が完了すると投資配分が表示されます。",
+    "completes.": "",
+    "CONTROL ROOM": "管理画面",
+    "Dashboard": "ダッシュボード",
+    "Simulation lab": "シミュレーション",
+    "● Local demo": "● ローカルデモ",
+    "Japan · Synthetic portfolio": "日本・架空ポートフォリオ",
+    "Disaster recovery platform": "災害復旧プラットフォーム",
+    "Page not found.": "ページが見つかりません。",
+    "Return to dashboard": "ダッシュボードに戻る",
+    "Retry": "再試行",
+    "Could not reach the control room. Check that the BFF and its backend": "管理画面に接続できません。BFFとバックエンドサービスの",
+    "services are running.": "稼働状態を確認してください。",
+    "SAFE": "安全",
+    "REPORTED": "報告完了",
+    "IMPACTED": "被災",
+    "MODERATE": "中程度",
+    "CONSERVATIVE": "保守的",
+    "AGGRESSIVE": "積極的",
+    "RESIDENTIAL": "住宅",
+    "EARTHQUAKE": "地震",
+    "FLOOD": "洪水",
+    "TYPHOON": "台風",
+    "TSUNAMI": "津波",
+    "Payout": "支払額",
+    "Sign in for exports": "エクスポート用ログイン",
+    "Sign out": "ログアウト",
+    "Email": "メールアドレス",
+    "Password": "パスワード",
+    "Download report": "レポートをダウンロード",
+    "Export JSON report": "JSONレポートを出力",
+    "Export becomes available when the report is complete.": "レポート完成後にエクスポートできます。",
+    "Please sign in again.": "再度ログインしてください。",
+    "Cannot read export status.": "エクスポート状況を取得できません。",
+    "Export failed. Please contact support.": "エクスポートに失敗しました。サポートに連絡してください。",
+    "Cannot download this export.": "エクスポートをダウンロードできません。",
+    "Invalid download link.": "ダウンロードリンクが無効です。",
+    "Export is still processing. Try checking again later.": "処理中です。しばらくしてから再確認してください。",
+    "Export unavailable.": "エクスポートを利用できません。",
+    "Sign-in failed. Check your credentials and account setup.": "ログインに失敗しました。認証情報とアカウント設定を確認してください。",
+    "You do not have permission to export this property.": "この物件のエクスポート権限がありません。",
+    "Cannot request this export.": "エクスポートを要求できません。",
+    "Download JSON (link valid for 5 minutes)": "JSONをダウンロード（リンク有効期間：5分）",
+    "Export:": "エクスポート："
+};
+
+let activeLanguage: Language = "en";
+const listeners = new Set<() => void>();
+
+export function getLanguage(): Language { return activeLanguage; }
+export function setLanguage(language: Language): void {
+    activeLanguage = language;
+    if (typeof document !== "undefined") document.documentElement.lang = language;
+    try { localStorage.setItem(STORAGE_KEY, language); } catch { /* storage can be unavailable */ }
+    listeners.forEach((notify) => notify());
+}
+export function initializeLanguage(): void {
+    let saved: string | null = null;
+    try { saved = localStorage.getItem(STORAGE_KEY); } catch { /* use English */ }
+    setLanguage(saved === "ja" ? "ja" : "en");
+}
+export function useLanguage(): Language {
+    return useSyncExternalStore(
+        (callback) => { listeners.add(callback); return () => { listeners.delete(callback); }; },
+        getLanguage,
+        () => "en",
+    );
+}
+export function t(english: string): string {
+    return activeLanguage === "ja" ? (japanese[english] ?? english) : english;
+}
+export function formatMoney(value: number): string {
+    return new Intl.NumberFormat(activeLanguage === "ja" ? "ja-JP" : "en-IE", {
+        style: "currency", currency: "EUR",
+    }).format(value);
+}
+export function formatStatus(value: string): string {
+    return activeLanguage === "ja" && japanese[value]
+        ? japanese[value]
+        : value.toLowerCase().replaceAll("_", " ");
+}

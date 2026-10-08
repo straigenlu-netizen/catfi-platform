@@ -40,6 +40,28 @@ python -m unittest discover -s tests -p 'test_security_workflow.py'
 
 **Current state:** all 19 Maven reactor projects build; the BFF, React UI and Kafka demo flow are implemented. Current verification results and runtime limits are in [VALIDATION.md](VALIDATION.md). Last updated: 2026-10-06.
 
+## Localization (English / Japanese)
+
+The React control room defaults to English (`en`) and offers 日本語 (`ja`) in the
+header. Selection is saved in browser localStorage (`catfi.language`) and
+restored on reload. Frontend labels/statuses use the language catalog in
+`web-ui/src/i18n.ts`; missing Japanese strings fall back to English. Currency
+amounts remain **EUR** (only their display format changes). UI API requests
+send `Accept-Language` for future localized server messages. Business event
+codes, financial amounts and persisted records remain language-independent.
+
+To verify: `cd web-ui && npm ci && npm test && npm run build && npm run test:e2e`.
+The customer portal and server-side localized validation messages are not
+introduced by this step. The simulation UI also fetches a session CSRF token
+before posting, matching the BFF security configuration.
+
+## Integration test stability
+
+The notification Kafka integration test uses `earliest` offset reset **only in
+the test application context**. Its original `latest` setting can miss an event
+published before the embedded Kafka listener receives its partition assignment.
+Production notification consumer behavior is unchanged.
+
 ## Product experience
 
 - **Dashboard:** every registered property, owner, risk profile, active policy and latest report. Properties without a report remain visible as `SAFE`.

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { formatMoney, formatStatus, getLanguage } from "./i18n";
 export type DisasterType = "EARTHQUAKE" | "FLOOD" | "TYPHOON" | "TSUNAMI";
 export interface Policy {
     policyId: string;
@@ -46,6 +47,7 @@ export interface Trigger {
     longitude: number;
 }
 const client = axios.create({ baseURL: "/api/ui", timeout: 15000 });
+client.interceptors.request.use((config) => { config.headers.set("Accept-Language", getLanguage()); return config; });
 let csrfToken: string | undefined;
 const csrfClient = axios.create({ baseURL: "/api", timeout: 15000 });
 export async function prepareCsrf(): Promise<void> {
@@ -69,10 +71,5 @@ export const api = {
         (await client.post<{ eventId: string }>("/trigger-disaster", request))
             .data,
 };
-export const money = (value: number) =>
-    new Intl.NumberFormat("en-IE", {
-        style: "currency",
-        currency: "EUR",
-    }).format(value);
-export const label = (value: string) =>
-    value.toLowerCase().replaceAll("_", " ");
+export const money = formatMoney;
+export const label = formatStatus;

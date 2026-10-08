@@ -4,10 +4,11 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { vi } from "vitest";
 import { Dashboard, Simulation } from "./App";
-import { api } from "./api";
+import { api, prepareCsrf } from "./api";
 vi.mock("./api", async (importOriginal) => ({
     ...(await importOriginal<typeof import("./api")>()),
     api: { dashboard: vi.fn(), details: vi.fn(), trigger: vi.fn() },
+    prepareCsrf: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("./FinancialChart", () => ({
     default: () => <div data-testid="financial-chart" />,
@@ -68,10 +69,10 @@ it("submits numeric disaster parameters and confirms publication", async () => {
                 latitude: 35.6762,
                 longitude: 139.6503,
             },
-            expect.anything(),
         ),
     );
     expect(await screen.findByText(/Event ID: event-123/)).toBeInTheDocument();
+    expect(prepareCsrf).toHaveBeenCalled();
 });
 it("reports Kafka publication failures", async () => {
     vi.mocked(api.trigger).mockRejectedValue(new Error("Unavailable"));

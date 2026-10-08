@@ -51,6 +51,7 @@ const rows = [
     },
 ];
 test.beforeEach(async ({ page }) => {
+    await page.route("**/api/auth/csrf", (route) => route.fulfill({ json: { token: "browser-csrf" } }));
     await page.route("**/api/ui/**", async (route) => {
         const url = new URL(route.request().url());
         const data = url.pathname.endsWith("dashboard")

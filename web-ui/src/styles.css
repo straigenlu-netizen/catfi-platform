@@ -1,6 +1,14 @@
 body {
     margin: 0;
 }
+
+.locale-switcher { display: flex; align-items: center; gap: 12px; }
+.locale-switcher select { font: inherit; border: 1px solid #d4dfd8; border-radius: 6px; padding: 7px; background: white; color: #284d40; }
+@media (max-width: 760px) {
+    .locale-switcher { gap: 6px; }
+    .locale-switcher label { display: none; }
+    .topbar { gap: 8px; }
+}
 .app-shell {
     display: flex;
     min-height: 100vh;

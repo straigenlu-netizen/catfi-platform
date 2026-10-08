@@ -6,7 +6,7 @@ export default defineConfig({
         ? "**/live-pipeline.spec.ts"
         : process.env.CATFI_E2E_EXPORT
           ? "**/aws-export.spec.ts"
-          : "**/control-room.spec.ts",
+          : ["**/control-room.spec.ts", "**/localization.spec.ts"],
     timeout: 45000,
     workers: 1,
     use: {

@@ -8,7 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.context.EmbeddedKafka;
-@SpringBootTest(properties="spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}")
+@SpringBootTest(properties={"spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}", "spring.kafka.consumer.auto-offset-reset=earliest"})
 @EmbeddedKafka(partitions=1,topics="catfi.damage.assessed")
 class NotificationKafkaIT {
   @Autowired KafkaTemplate<String,Object> kafka; @MockBean NotificationService notifications;

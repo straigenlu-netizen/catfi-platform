@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { t, useLanguage } from "./i18n";
 import { Alert, Box, Button, TextField, Typography } from "@mui/material";
 
 export interface ExportConfiguration { apiUrl: string; region: string; clientId: string }
@@ -11,6 +12,7 @@ const configured: ExportConfiguration = {
 export function ReportExport({ propertyId, ready, config = configured }: {
     propertyId: string; ready: boolean; config?: ExportConfiguration;
 }) {
+    useLanguage(); // Re-render when the language changes.
     const requestKey = useRef("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -33,16 +35,16 @@ export function ReportExport({ propertyId, ready, config = configured }: {
                 });
                 if (response.status === 401) {
                     setToken("");
-                    setError("Please sign in again.");
+                    setError(t("Please sign in again."));
                     return;
                 }
                 if (!response.ok) {
-                    setError("Cannot read export status.");
+                    setError(t("Cannot read export status."));
                     return;
                 }
                 const data = await response.json(); setStatus(data.status);
                 if (data.status === "FAILED") {
-                    setError("Export failed. Please contact support.");
+                    setError(t("Export failed. Please contact support."));
                     return;
                 }
                 if (data.status === "SUCCEEDED") {
@@ -50,12 +52,12 @@ export function ReportExport({ propertyId, ready, config = configured }: {
                         headers: { Authorization: `Bearer ${token}` }, signal: controller.signal,
                     });
                     if (!link.ok) {
-                        setError("Cannot download this export.");
+                        setError(t("Cannot download this export."));
                         return;
                     }
                     const body = await link.json();
                     if (new URL(body.url).protocol !== "https:"){
-                        setError("Invalid download link.");
+                        setError(t("Invalid download link."));
                         return;
                     }
                     setUrl(body.url);
@@ -63,12 +65,12 @@ export function ReportExport({ propertyId, ready, config = configured }: {
                 }
                 attempts++;
                 if (attempts >= 90) {
-                    setError("Export is still processing. Try checking again later.");
+                    setError(t("Export is still processing. Try checking again later."));
                     return;
                 }
                 timer = setTimeout(() => void poll(), 2000);
             } catch (e) {
-                if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "Export unavailable.");
+                if (!controller.signal.aborted) setError(e instanceof Error ? e.message : t("Export unavailable."));
             }
         };
         void poll();
@@ -84,10 +86,10 @@ export function ReportExport({ propertyId, ready, config = configured }: {
             });
             const body = await response.json();
             if (!response.ok || !body.AuthenticationResult?.IdToken) {
-                setError("Sign-in failed. Check your credentials and account setup.");
+                setError(t("Sign-in failed. Check your credentials and account setup."));
                 return;
             }            setToken(body.AuthenticationResult.IdToken);
-        } catch { setError("Sign-in failed. Check your credentials and account setup."); }
+        } catch { setError(t("Sign-in failed. Check your credentials and account setup.")); }
         finally { setPassword(""); setBusy(false); }
     };
     const start = async () => {
@@ -99,36 +101,36 @@ export function ReportExport({ propertyId, ready, config = configured }: {
             });
             if (response.status === 401) {
                 setToken("");
-                setError("Please sign in again.");
+                setError(t("Please sign in again."));
                 return;
             }
 
             if (response.status === 403) {
-                setError("You do not have permission to export this property.");
+                setError(t("You do not have permission to export this property."));
                 return;
             }
 
             if (!response.ok) {
-                setError("Cannot request this export.");
+                setError(t("Cannot request this export."));
                 return;
             }
             const body = await response.json(); requestKey.current = ""; setJob(body.jobId); setStatus(body.status);
-        } catch (e) { setError(e instanceof Error ? e.message : "Export unavailable."); }
+        } catch (e) { setError(e instanceof Error ? e.message : t("Export unavailable.")); }
         finally { setBusy(false); }
     };
     return <Box component="section" aria-label="Report export" sx={{ my: 3 }}>
-        <Typography variant="h6">Download report</Typography>
+        <Typography variant="h6">{t("Download report")}</Typography>
         {error && <Alert severity="error">{error}</Alert>}
         {!token ? <Box component="form" onSubmit={(event) => { event.preventDefault(); void signIn(); }} sx={{ display: "flex", gap: 1, flexWrap: "wrap", my: 1 }}>
-            <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="username" />
-            <TextField label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
-            <Button type="submit" disabled={busy}>Sign in for exports</Button>
+            <TextField label={t("Email")} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="username" />
+            <TextField label={t("Password")} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+            <Button type="submit" disabled={busy}>{t("Sign in for exports")}</Button>
         </Box> : <Box sx={{ display: "flex", gap: 1, my: 1 }}>
-            <Button variant="outlined" disabled={!ready || busy || (!!job && status !== "FAILED" && status !== "SUCCEEDED")} onClick={() => void start()}>Export JSON report</Button>
-            <Button onClick={() => { setToken(""); setJob(""); setUrl(""); setStatus(""); }}>Sign out</Button>
+            <Button variant="outlined" disabled={!ready || busy || (!!job && status !== "FAILED" && status !== "SUCCEEDED")} onClick={() => void start()}>{t("Export JSON report")}</Button>
+            <Button onClick={() => { setToken(""); setJob(""); setUrl(""); setStatus(""); }}>{t("Sign out")}</Button>
         </Box>}
-        {!ready && <Typography>Export becomes available when the report is complete.</Typography>}
-        {status && <Typography role="status">Export: {status.toLowerCase()}</Typography>}
-        {url && <Button component="a" href={url} target="_blank" rel="noopener noreferrer">Download JSON (link valid for 5 minutes)</Button>}
+        {!ready && <Typography>{t("Export becomes available when the report is complete.")}</Typography>}
+        {status && <Typography role="status">{t("Export:")} {t(status)}</Typography>}
+        {url && <Button component="a" href={url} target="_blank" rel="noopener noreferrer">{t("Download JSON (link valid for 5 minutes)")}</Button>}
     </Box>;
 }

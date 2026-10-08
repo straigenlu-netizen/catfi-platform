@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import App from "./App";
 import "./styles.css";
+import { initializeLanguage } from "./i18n";
+initializeLanguage();
 const theme = createTheme({
     palette: {
         primary: { main: "#245e4d" },

@@ -4,6 +4,7 @@ import { BarChart } from "echarts/charts";
 import { GridComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import { money } from "./api";
+import { t, useLanguage, getLanguage } from "./i18n";
 echarts.use([BarChart, GridComponent, TooltipComponent, CanvasRenderer]);
 export default function FinancialChart({
     damage,
@@ -14,6 +15,7 @@ export default function FinancialChart({
     compensation: number;
     payout: number;
 }) {
+    const language = useLanguage();
     const element = useRef<HTMLDivElement>(null);
     useEffect(() => {
         if (!element.current) return;
@@ -28,13 +30,13 @@ export default function FinancialChart({
                 type: "value",
                 axisLabel: {
                     formatter: (value: number) =>
-                        `€${value.toLocaleString("en")}`,
+                        `€${value.toLocaleString(getLanguage() === "ja" ? "ja-JP" : "en")}`,
                 },
                 splitLine: { lineStyle: { color: "#edf0ea" } },
             },
             yAxis: {
                 type: "category",
-                data: ["Payout", "Coverage", "Damage"],
+                data: [t("Payout"), t("Coverage"), t("Damage")],
                 axisTick: { show: false },
                 axisLine: { show: false },
             },
@@ -59,13 +61,15 @@ export default function FinancialChart({
             observer.disconnect();
             chart.dispose();
         };
-    }, [damage, compensation, payout]);
+    }, [damage, compensation, payout, language]);
     return (
         <div
             ref={element}
             className="financial-chart"
             role="img"
-            aria-label={`Damage ${money(damage)}, compensation ${money(compensation)}, payout ${money(payout)}`}
+            aria-label={language === "ja"
+                ? `${t("Damage")} ${money(damage)}, ${t("Coverage")} ${money(compensation)}, ${t("Payout")} ${money(payout)}`
+                : `Damage ${money(damage)}, compensation ${money(compensation)}, payout ${money(payout)}`}
         />
     );
 }
