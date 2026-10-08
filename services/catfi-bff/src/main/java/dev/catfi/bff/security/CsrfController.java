@@ -4,7 +4,7 @@ import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Materializes the CSRF cookie for the browser before a state-changing request. */
+/** Returns the session-backed CSRF token before a state-changing browser request. */
 @RestController
 public class CsrfController {
   @GetMapping("/api/auth/csrf")

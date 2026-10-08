@@ -1,5 +1,10 @@
 # notification-service
 
+The Kafka integration test (`NotificationKafkaIT`) waits for all listeners subscribed
+to `catfi.damage.assessed` to receive their partition assignment before publishing.
+This fixes a CI startup race from workflow run #37759532774; `earliest` remains
+restricted to the test profile and production consumer configuration is unchanged.
+
 Consumes important claim lifecycle events and sends customer email notifications.
 
 ## Stages

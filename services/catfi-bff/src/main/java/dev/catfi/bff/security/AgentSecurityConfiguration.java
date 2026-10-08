@@ -17,10 +17,21 @@ public class AgentSecurityConfiguration {
   @Bean
   UserDetailsService userDetailsService(javax.sql.DataSource dataSource) {
     var users = new JdbcUserDetailsManager(dataSource);
-    users.setUsersByUsernameQuery(
-        "select username, password_hash, enabled from agent_accounts where username = ?");
-    users.setAuthoritiesByUsernameQuery(
-        "select username, role from agent_accounts where username = ?");
+    // A client identity is NEVER obtained from browser-supplied client IDs.
+    users.setUsersByUsernameQuery("""
+        select username, password_hash, enabled from (
+          select username, password_hash, enabled from agent_accounts
+          union all
+          select username, password_hash, enabled from customer_accounts
+        ) accounts where username = ?
+        """);
+    users.setAuthoritiesByUsernameQuery("""
+        select username, role from (
+          select username, role from agent_accounts
+          union all
+          select username, role from customer_accounts
+        ) accounts where username = ?
+        """);
     return users;
   }
 
@@ -28,13 +39,19 @@ public class AgentSecurityConfiguration {
   SecurityFilterChain securityFilterChain(HttpSecurity http, AuditService audit) throws Exception {
     http.csrf(csrf -> {})
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/auth/login").permitAll()
-            .requestMatchers("/api/ui/**").hasRole("AGENT")
+            .requestMatchers("/api/auth/login", "/api/auth/csrf").permitAll()
+            .requestMatchers("/api/customer/**").hasRole("CUSTOMER")
+            .requestMatchers("/api/agent/**", "/api/ui/**").hasRole("AGENT")
             .anyRequest().authenticated())
+        .exceptionHandling(ex -> ex.authenticationEntryPoint(
+            (request, response, exception) -> response.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
         .formLogin(form -> form
             .loginProcessingUrl("/api/auth/login")
             .successHandler((request, response, authentication) -> {
-              request.getSession().setAttribute("catfi.agent", authentication.getName());
+              boolean agent = authentication.getAuthorities().stream()
+                  .anyMatch(a -> a.getAuthority().equals("ROLE_AGENT"));
+              request.getSession().setAttribute(agent ? "catfi.agent" : "catfi.customer",
+                  authentication.getName());
               audit.recordSecurity(authentication.getName(), "LOGIN_SUCCESS");
               response.setStatus(HttpServletResponse.SC_NO_CONTENT);
             })

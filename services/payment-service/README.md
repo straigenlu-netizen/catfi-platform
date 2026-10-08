@@ -8,6 +8,10 @@ Implements the cash-payout branch of a calculated compensation.
 
 Consumes catfi.compensation.calculated, skips zero payout, constructs/persists a simulated payment in PostgreSQL and publishes catfi.payment.completed.
 
+The internal `GET /api/v1/payments/property/{id}` endpoint on port 8082 returns
+persisted simulated payouts, ordered newest first. The BFF checks the session's
+ownership before requesting customer histories; never publish this internal endpoint.
+
 ## Communication and purpose
 
 Compensation supplies amountToPay. Reporting consumes payment completion to update the report. PostgreSQL stores the payment record.

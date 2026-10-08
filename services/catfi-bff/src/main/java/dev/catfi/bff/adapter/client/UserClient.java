@@ -9,4 +9,9 @@ import org.springframework.web.bind.annotation.*;
 public interface UserClient {
   @GetMapping("/api/v1/clients/{id}")
   ClientProfile getClient(@PathVariable("id") UUID id);
+
+  @PutMapping("/api/v1/clients/{id}/profile")
+  ClientProfile updateProfile(@PathVariable("id") UUID id, @RequestBody ProfileUpdate request);
+
+  record ProfileUpdate(String fullName, String email) {}
 }

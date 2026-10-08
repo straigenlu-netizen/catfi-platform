@@ -1,6 +1,15 @@
 # CatFi Control Room
 
-React, TypeScript, MUI, TanStack Query, Axios and ECharts. All API requests go through the BFF at `/api/ui`.
+React, TypeScript, MUI, TanStack Query, Axios and ECharts. All browser APIs go through the BFF (`/api/ui`, `/api/customer`, `/api/agent`).
+
+## Customer and agent portals
+
+Navigate to `/customer` or `/agent`, or use the links in the Control Room sidebar.
+`/login` posts a Spring Security form login with a CSRF header and uses the session cookie.
+Customer profile edits send only `fullName` and `email`; risk and ownership remain immutable.
+Customer policies are filtered by server-derived identity. Agents can list insured clients,
+property summaries and payment history. All new UI strings support English and Japanese.
+Run `npm test`, `npm run build`, and `npm run test:e2e` to verify.
 
 ```powershell
 npm ci

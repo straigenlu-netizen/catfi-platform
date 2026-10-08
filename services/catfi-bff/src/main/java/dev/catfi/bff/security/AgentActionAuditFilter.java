@@ -17,7 +17,7 @@ public class AgentActionAuditFilter implements HandlerInterceptor, WebMvcConfigu
 
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
-    registry.addInterceptor(this).addPathPatterns("/api/ui/**");
+    registry.addInterceptor(this).addPathPatterns("/api/ui/**", "/api/agent/**");
   }
 
   @Override

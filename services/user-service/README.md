@@ -8,6 +8,11 @@ Provides customer identities and investment risk profiles. A customer profile is
 
 GET /api/v1/clients/{id} returns a profile; POST registers a profile. Demo profile seeds clients matching the demonstration properties. The current store is in memory.
 
+A validated `PUT /api/v1/clients/{id}/profile` updates only name and email. Client ID
+and risk profile remain unchanged. BFF authorization binds the request to the caller's
+own ID; this endpoint is internal and must not be exposed directly. As profile storage
+is in memory, changes are lost on service restart.
+
 ## Communication and purpose
 
 BFF uses names and risk profiles for the UI. Investment service retrieves the property owner’s risk profile to choose allocation weights.

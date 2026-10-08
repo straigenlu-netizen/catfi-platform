@@ -10,6 +10,17 @@ insert into agent_accounts(username,password_hash,role,enabled) values
 ('AgentCRM1','$2y$12$J0/g9NcvNVRzRFpzivoTIual./sytoft2tne0jo38g/funKtluoYW','ROLE_AGENT',true)
 on conflict (username) do nothing;
 
+-- Customer ownership mapping is kept server-side; clients cannot select another clientId.
+create table if not exists customer_accounts (
+  username varchar(80) primary key,
+  password_hash varchar(100) not null,
+  client_id uuid not null unique,
+  role varchar(40) not null default 'ROLE_CUSTOMER',
+  enabled boolean not null default true,
+  created_at timestamptz not null default now(),
+  constraint customer_role_check check (role = 'ROLE_CUSTOMER')
+);
+
 create table if not exists agent_audit_events (
   id bigserial primary key,
   username varchar(80) not null,

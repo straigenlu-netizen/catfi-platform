@@ -6,7 +6,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 
 import dev.catfi.bff.adapter.web.UiController;
 import dev.catfi.bff.application.UiAggregationService;
@@ -30,8 +29,7 @@ class AgentSecurityConfigurationTest {
   @Test
   void shouldRejectAnonymousUiRequest() throws Exception {
     mvc.perform(get("/api/ui/dashboard"))
-        .andExpect(status().is3xxRedirection())
-        .andExpect(redirectedUrlPattern("**/login"));
+        .andExpect(status().isUnauthorized());
     verifyNoInteractions(service);
   }
 
@@ -46,7 +44,7 @@ class AgentSecurityConfigurationTest {
   @Test
   void shouldRejectAnonymousSimulationRequest() throws Exception {
     mvc.perform(post("/api/ui/trigger-disaster").with(csrf()))
-        .andExpect(status().is3xxRedirection());
+        .andExpect(status().isUnauthorized());
     verifyNoInteractions(service);
   }
 

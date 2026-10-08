@@ -21,6 +21,7 @@ import ArrowBack from "@mui/icons-material/ArrowBack";
 import Refresh from "@mui/icons-material/Refresh";
 import { t, setLanguage, useLanguage } from "./i18n";
 import { api, label, money, type DisasterType, type Trigger, prepareCsrf } from "./api";
+import { AgentPortal, CustomerPortal, PortalLogin } from "./Portals";
 const FinancialChart = lazy(() => import("./FinancialChart"));
 function Status({ value }: { value: string }) {
     return (
@@ -551,6 +552,8 @@ export default function App() {
                         <BoltOutlined />
                         {t("Simulation lab")}
                     </NavLink>
+                    <NavLink to="/agent">{t("Agent portal")}</NavLink>
+                    <NavLink to="/customer">{t("Customer portal")}</NavLink>
                 </nav>
                 <div className="sidebar-footer">
                     {t("● Local demo")}<span>{t("Japan · Synthetic portfolio")}</span>
@@ -573,6 +576,9 @@ export default function App() {
                     <Routes>
                         <Route path="/" element={<Dashboard />} />
                         <Route path="/simulation" element={<Simulation />} />
+                        <Route path="/agent" element={<AgentPortal />} />
+                        <Route path="/customer" element={<CustomerPortal />} />
+                        <Route path="/login" element={<PortalLogin />} />
                         <Route
                             path="/properties/:id"
                             element={<PropertyDetails />}

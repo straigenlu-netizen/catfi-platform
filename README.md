@@ -62,6 +62,41 @@ the test application context**. Its original `latest` setting can miss an event
 published before the embedded Kafka listener receives its partition assignment.
 Production notification consumer behavior is unchanged.
 
+## Customer and agent portals (demo)
+
+The existing Control Room remains available to agents. Additional role-separated screens:
+
+- `/customer` — self-service profile, owned insurance policies, latest claim status, full simulated payment history and contact updates.
+- `/agent` — insured clients, associated properties, claim summaries and simulated payments across the portfolio.
+- `/login` — session login for either role (English by default, 日本語 selectable in the header).
+
+All customer API calls resolve the client ID from the authenticated server-side account mapping;
+property and payment ownership is checked **before** exposing any details. Agents use a
+separate `ROLE_AGENT` boundary. Spring CSRF protects login, logout and profile updates.
+The BFF proxies internally to user, policy, reporting and payment services. Only its HTTP
+port is exposed in the local Compose demo; do not expose internal services publicly.
+
+With `SPRING_PROFILES_ACTIVE=demo` (enabled for BFF by `compose.yml`), use
+`demo1@example.com` / `CatFiLocalCustomer2026!` or
+`demo.agent` / `CatFiLocalAgent2026!`. These accounts are seeded only in the demo
+profile. **Change both demo passwords through `CATFI_DEMO_CUSTOMER_PASSWORD` and
+`CATFI_DEMO_AGENT_PASSWORD` before exposing any endpoint to the internet.**
+Existing seeded accounts are not overwritten on startup; clear/rotate demo accounts
+in the demo DB if previously initialized with another password.
+
+User profiles and policies remain **in-memory demo data**; contact edits disappear on
+service restart. The login username does not change when a contact email changes.
+Report entries show the latest per-property claim status; payment history
+is read from payment-service PostgreSQL and reflects simulated payouts only. This is not
+a production insurance system. Public hosting still requires hardened identity lifecycle,
+shared authentication between services, persistent profiles and abuse controls.
+
+Run: `./mvnw -B -ntp verify -Pintegration`, then `cd web-ui && npm test && npm run build && npm run test:e2e`.
+
+CI regression: run #37759532774 failed in `NotificationKafkaIT`; the integration test
+now waits for the damage-topic consumer's actual partition assignment before publishing.
+The production offset reset policy is unchanged.
+
 ## Product experience
 
 - **Dashboard:** every registered property, owner, risk profile, active policy and latest report. Properties without a report remain visible as `SAFE`.

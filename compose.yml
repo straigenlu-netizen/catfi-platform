@@ -7,6 +7,7 @@ x-backend: &backend
     SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     SERVICES_POLICY_URL: http://property-policy-service:8084
     SERVICES_USER_URL: http://user-service:8080
+    SERVICES_PAYMENT_URL: http://payment-service:8082
     SERVICES_REPORTING_URL: http://reporting-service:8085
     SERVICES_DISASTER_URL: http://disaster-simulator:8086
 services:
@@ -179,6 +180,9 @@ services:
     environment:
       <<: *backend-environment
       CATFI_SERVICE: catfi-bff
+      SPRING_PROFILES_ACTIVE: demo
+      CATFI_DEMO_CUSTOMER_PASSWORD: ${CATFI_DEMO_CUSTOMER_PASSWORD:-CatFiLocalCustomer2026!}
+      CATFI_DEMO_AGENT_PASSWORD: ${CATFI_DEMO_AGENT_PASSWORD:-CatFiLocalAgent2026!}
       CATFI_DB_URL: jdbc:postgresql://compensation-db:5432/catfi_compensation
       CATFI_DB_USER: ${CATFI_DB_USER:-catfi}
       CATFI_DB_PASSWORD: ${CATFI_DB_PASSWORD:?Set CATFI_DB_PASSWORD in .env}
