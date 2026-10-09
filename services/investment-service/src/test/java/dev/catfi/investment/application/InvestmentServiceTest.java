@@ -25,6 +25,18 @@ class InvestmentServiceTest {
   }
 
   @Test
+  void replayOfSameCompensationHasStableDecisionId() {
+    var compensation = UUID.randomUUID();
+    var property = UUID.randomUUID();
+    var first = service.allocateFunds(compensation, property, new BigDecimal("100"), "MODERATE");
+    var replay = service.allocateFunds(compensation, property, new BigDecimal("100.00"), "MODERATE");
+    assertThat(first.getDecisionId()).isEqualTo(replay.getDecisionId());
+    assertThat(first.getAllocation()).isEqualTo(replay.getAllocation());
+    assertThat(service.allocateFunds(UUID.randomUUID(), property, new BigDecimal("100"), "MODERATE")
+        .getDecisionId()).isNotEqualTo(first.getDecisionId());
+  }
+
+  @Test
   void shouldAllocateConservativePortfolio() {
     var result =
         service.allocateFunds(

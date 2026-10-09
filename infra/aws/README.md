@@ -6,6 +6,6 @@
 
 Build from the repository root with Java 21: `./mvnw clean verify`; Maven Shade produces services/aws-functions/target/catfi-functions.jar. SAM deploy uploads that exact artifact via CodeUri; no second Lambda build is required. Run `sam validate --lint --template-file infra/aws/template.yaml` and `cfn-lint infra/aws/github-oidc-bootstrap.yaml` before deployment.
 
-Resources incur AWS charges. Tables/buckets have Retain policies, so deleting the stack keeps data; cleanup is explicit, including S3 versions. SES sender/recipient and SNS subscription require setup. Weather schedule defaults to disabled. Detailed Windows commands, GitHub variables, permission boundaries, recovery and test commands are in [AWS implementation guide](../../docs/aws/AWS_IMPLEMENTATION_RU.md).
+Resources incur AWS charges. Tables/buckets have Retain policies, so deleting the stack keeps data; cleanup is explicit, including S3 versions. SES sender/recipient and SNS subscription require setup. Weather schedule defaults to disabled. The older Russian AWS implementation guide is not included in this branch; verify account variables, IAM permissions and recovery steps against the SAM template and deployment workflow before deploying.
 
 For parameter-only changes, prepare a literal version identity with scripts/aws/prepare_release.py and deploy the generated release.yaml, as the GitHub workflow does.

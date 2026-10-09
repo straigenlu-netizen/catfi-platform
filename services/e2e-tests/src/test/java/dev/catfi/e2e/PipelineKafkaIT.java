@@ -31,12 +31,27 @@ import dev.catfi.sensor.application.SensorSimulationService;
 import java.math.BigDecimal;
 import java.util.*;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.SpringBootConfiguration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
+import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.context.annotation.Import;
+import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.web.client.RestTemplate;
 
-@org.springframework.boot.test.context.SpringBootTest(
+@SpringBootTest(
     classes = PipelineKafkaIT.TestApplication.class,
-    webEnvironment =
-        org.springframework.boot.test.context.SpringBootTest.WebEnvironment.DEFINED_PORT,
+    webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
     properties = {
       "spring.kafka.consumer.auto-offset-reset=earliest",
       "spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer",
@@ -46,7 +61,7 @@ import org.springframework.web.client.RestTemplate;
       "spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer",
       "logging.level.root=WARN"
     })
-@org.springframework.kafka.test.context.EmbeddedKafka(
+@EmbeddedKafka(
     partitions = 1,
     topics = {
       "catfi.disasters",
@@ -57,7 +72,7 @@ import org.springframework.web.client.RestTemplate;
       "catfi.investment.allocated"
     },
     bootstrapServersProperty = "spring.kafka.bootstrap-servers")
-@org.springframework.test.annotation.DirtiesContext
+@DirtiesContext
 class PipelineKafkaIT {
 
   private static final UUID PROPERTY = UUID.fromString("10000000-0000-0000-0000-000000000001");
@@ -72,24 +87,24 @@ class PipelineKafkaIT {
     }
   }
 
-  @org.springframework.test.context.DynamicPropertySource
-  static void properties(org.springframework.test.context.DynamicPropertyRegistry registry) {
+  @DynamicPropertySource
+  static void properties(DynamicPropertyRegistry registry) {
     registry.add("server.port", () -> PORT);
     registry.add("services.disaster.url", () -> "http://127.0.0.1:" + PORT);
   }
 
-  @org.springframework.boot.SpringBootConfiguration
-  @org.springframework.boot.autoconfigure.EnableAutoConfiguration(
+  @SpringBootConfiguration
+  @EnableAutoConfiguration(
       exclude = {
-        org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration.class,
-        org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration.class,
-        org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration.class,
-        org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration.class,
-        org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration.class,
-        org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration.class
+        DataSourceAutoConfiguration.class,
+        HibernateJpaAutoConfiguration.class,
+        JpaRepositoriesAutoConfiguration.class,
+        LiquibaseAutoConfiguration.class,
+        MongoAutoConfiguration.class,
+        MongoDataAutoConfiguration.class
       })
-  @org.springframework.cloud.openfeign.EnableFeignClients(clients = DisasterClient.class)
-  @org.springframework.context.annotation.Import({
+  @EnableFeignClients(clients = DisasterClient.class)
+  @Import({
     UiController.class,
     SimulationController.class,
     SensorEventProcessor.class,
@@ -159,6 +174,12 @@ class PipelineKafkaIT {
     @org.springframework.context.annotation.Bean
     PortfolioRepository portfolioRepository() {
       return mock(PortfolioRepository.class);
+    }
+
+
+    @org.springframework.context.annotation.Bean
+    org.springframework.jdbc.core.JdbcTemplate portfolioJdbcTemplate() {
+      return mock(org.springframework.jdbc.core.JdbcTemplate.class);
     }
 
     @org.springframework.context.annotation.Bean
@@ -253,7 +274,7 @@ class PipelineKafkaIT {
   }
 
   @org.springframework.beans.factory.annotation.Autowired
-  private org.springframework.boot.test.web.client.TestRestTemplate http;
+  private TestRestTemplate http;
 
   @org.springframework.beans.factory.annotation.Autowired private ReportingService reporting;
 

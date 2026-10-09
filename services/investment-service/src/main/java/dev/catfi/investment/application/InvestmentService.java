@@ -50,8 +50,14 @@ public class InvestmentService {
     String remainderAsset = "GOLD";
     allocation.put(remainderAsset, allocation.get(remainderAsset).add(amount.subtract(allocated)));
 
+    if (compensationId == null || propertyId == null) {
+      throw new IllegalArgumentException("Compensation and property IDs are required");
+    }
+    // A Kafka replay of the same compensation must preserve the portfolio idempotency key.
+    UUID decisionId = UUID.nameUUIDFromBytes(
+        ("catfi:investment:v1:" + compensationId).getBytes(java.nio.charset.StandardCharsets.UTF_8));
     return InvestmentDecision.builder()
-        .decisionId(UUID.randomUUID())
+        .decisionId(decisionId)
         .compensationResultId(compensationId)
         .propertyId(propertyId)
         .allocation(allocation)

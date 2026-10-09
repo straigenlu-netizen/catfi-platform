@@ -1,22 +1,34 @@
-# Application event flow
+# Application event flow (2026-10-09)
 
-Every event arrow below represents Kafka delivery; HTTP policy/owner lookups are described in ARCHITECTURE.md.
+Solid arrows are application flow; labels identify HTTP versus Kafka.
 
 ```mermaid
 flowchart TD
-    Disaster["Disaster simulator"] --> Sensors["Registered property sensors"]
-    Sensors --> Damage["Damage assessment"]
-    Damage --> Compensation["Policy-backed compensation"]
-    Compensation --> Payout["Simulated payout"]
-    Compensation --> Investment["Investment allocation"]
-    Investment --> Portfolio["Portfolio positions"]
-    Payout --> Reporting["Correlated property report"]
-    Investment --> Reporting
-    Damage --> Reporting
-    Compensation --> Reporting
+    Browser["React: control room / customer / agent"] -->|"session + CSRF / HTTP"| BFF["BFF: RBAC + audit + metrics"]
+    BFF -->|"HTTP"| Policy["Policy: in-memory budget + replay ledger"]
+    BFF -->|"HTTP"| User["User: in-memory demo profiles"]
+    BFF -->|"HTTP"| Reporting["Reporting: memory / DynamoDB"]
+    BFF -->|"HTTP trigger"| Disaster["Disaster simulator"]
+    Disaster -->|"Kafka disasters"| Sensors["Sensor simulator"]
+    Sensors -->|"Kafka sensors"| Damage["Damage service / MongoDB"]
+    Damage -->|"Kafka assessed"| Compensation["Compensation / PostgreSQL"]
+    Compensation -->|"HTTP reserve (not atomic)"| Policy
+    Compensation -->|"Kafka calculated"| Payment["Payment / PostgreSQL pending-event retry"]
+    Compensation -->|"Kafka calculated"| Investment["Investment allocation"]
+    Investment -->|"Kafka allocated"| Portfolio["Portfolio / PostgreSQL transactional receipts"]
+    Damage -->|"Kafka"| Reporting
+    Compensation -->|"Kafka"| Reporting
+    Payment -->|"Kafka completed"| Reporting
+    Investment -->|"Kafka"| Reporting
+    BFF -->|"Actuator"| Prometheus["Prometheus / Grafana (optional)"]
 ```
 
-The control room triggers disasters through the BFF. The BFF also aggregates property/policy/user APIs and the reporting read model. PostgreSQL stores financial records, MongoDB stores damage; policies and users are in memory; reports default to memory and optionally use durable DynamoDB storage. No Redis or blockchain component is implemented yet.
+**Reliability boundaries:** portfolio decision receipt and positions commit in one
+PostgreSQL transaction; the property-scoped advisory lock serializes writers.
+Payment has a pending-event retry mechanism. Policy reservations remain in
+memory, and compensation reserve HTTP + DB save are **not** atomic.
+Reporting's optional AWS DynamoDB mode is distinct from the local memory mode.
+Redis is optional for enrichment; there is no blockchain anchoring.
 
 ## AWS export boundary
 

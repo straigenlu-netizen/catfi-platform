@@ -2,4 +2,5 @@
   <include file="001-compensation.sql" relativeToChangelogFile="true"/>
   <include file="002-compensation-results.sql" relativeToChangelogFile="true"/>
   <include file="003-assessment-idempotency.sql" relativeToChangelogFile="true"/>
+  <include file="004-compensation-outbox.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>

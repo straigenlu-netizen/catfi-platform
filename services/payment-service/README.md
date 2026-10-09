@@ -18,7 +18,7 @@ Compensation supplies amountToPay. Reporting consumes payment completion to upda
 
 ## Important details
 
-No bank, payment provider or real money transfer. Investment is a parallel branch, not a consumer of customer payouts. Durable idempotency and outbox handling are still required before real financial use.
+No bank, payment provider or real money transfer. Investment is a parallel branch, not a consumer of customer payouts. A unique compensation-result ID suppresses identical payout replays; pending payment rows are retried for Kafka publication. This is at-least-once delivery, not a complete transactional outbox for the whole pipeline. Concurrent publisher ownership and downstream reconciliation still need review before real financial use.
 
 ## Verification and operation
 

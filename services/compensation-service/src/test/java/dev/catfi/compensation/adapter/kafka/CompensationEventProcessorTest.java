@@ -2,83 +2,42 @@ package dev.catfi.compensation.adapter.kafka;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
-
-import dev.catfi.common.domain.*;
-import dev.catfi.compensation.adapter.persistence.*;
-import dev.catfi.compensation.application.CompensationApplicationService;
-import dev.catfi.compensation.domain.CompensationCalculator;
+import dev.catfi.common.domain.DamageAssessment;
+import dev.catfi.compensation.application.DurableCompensationLedger;
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.client.RestTemplate;
 
 class CompensationEventProcessorTest {
-
   @Test
-  void shouldUseTrustedPolicyAndPublishCalculatedCompensation() {
-    var repository = mock(CompensationRepository.class);
+  void delegatesToTransactionalLedgerWithoutRemoteReservationOrDirectKafkaPublish() {
+    var ledger = mock(DurableCompensationLedger.class);
     var rest = mock(RestTemplate.class);
-    KafkaTemplate<String, CompensationResult> kafka = mock(KafkaTemplate.class);
-    var property = UUID.randomUUID();
-    var damage = UUID.randomUUID();
+    UUID property = UUID.randomUUID();
+    var policy = new CompensationEventProcessor.TrustedPolicy(property, BigDecimal.ONE,
+        BigDecimal.ZERO, new BigDecimal("100"), BigDecimal.ZERO, true);
     when(rest.getForObject(anyString(), eq(CompensationEventProcessor.TrustedPolicy.class)))
-        .thenReturn(
-            new CompensationEventProcessor.TrustedPolicy(
-                property,
-                new BigDecimal("0.9"),
-                new BigDecimal("5000"),
-                new BigDecimal("100000"),
-                BigDecimal.ZERO,
-                true));
-    var processor =
-        new CompensationEventProcessor(
-            new CompensationApplicationService(new CompensationCalculator()),
-            repository,
-            kafka,
-            rest);
-    processor.handleDamageAssessed(
-        DamageAssessment.builder()
-            .assessmentId(damage)
-            .propertyId(property)
-            .damageAmount(new BigDecimal("20000"))
-            .build());
-    var entity = ArgumentCaptor.forClass(CompensationResultEntity.class);
-    verify(repository).saveAndFlush(entity.capture());
-    assertThat(entity.getValue().getAmount()).isEqualByComparingTo("13000");
-    assertThat(entity.getValue().getDamageAssessmentId()).isEqualTo(damage);
-    verify(kafka)
-        .send(
-            eq("catfi.compensation.calculated"),
-            eq(property.toString()),
-            any(CompensationResult.class));
+        .thenReturn(policy);
+    var assessment = DamageAssessment.builder().assessmentId(UUID.randomUUID())
+        .propertyId(property).damageAmount(BigDecimal.TEN).build();
+    new CompensationEventProcessor(ledger, rest).handleDamageAssessed(assessment);
+    verify(ledger).record(assessment, policy);
+    verify(rest, never()).postForObject(anyString(), any(), any());
+    verify(rest).getForObject(anyString(), eq(CompensationEventProcessor.TrustedPolicy.class));
+    verifyNoMoreInteractions(rest);
   }
 
   @Test
-  void shouldNotInventPolicyTermsWhenPolicyServiceFails() {
-    var repository = mock(CompensationRepository.class);
+  void policyFailureDoesNotAttemptLedgerWrite() {
+    var ledger = mock(DurableCompensationLedger.class);
     var rest = mock(RestTemplate.class);
-    KafkaTemplate<String, CompensationResult> kafka = mock(KafkaTemplate.class);
     when(rest.getForObject(anyString(), eq(CompensationEventProcessor.TrustedPolicy.class)))
-        .thenThrow(new IllegalStateException("Policy unavailable"));
-    var processor =
-        new CompensationEventProcessor(
-            new CompensationApplicationService(new CompensationCalculator()),
-            repository,
-            kafka,
-            rest);
-    assertThatThrownBy(
-            () ->
-                processor.handleDamageAssessed(
-                    DamageAssessment.builder()
-                        .assessmentId(UUID.randomUUID())
-                        .propertyId(UUID.randomUUID())
-                        .damageAmount(BigDecimal.TEN)
-                        .build()))
-        .isInstanceOf(IllegalStateException.class);
-    verify(repository).findByDamageAssessmentId(any(UUID.class));
-    verifyNoMoreInteractions(repository);
-    verifyNoInteractions(kafka);
+        .thenThrow(new IllegalStateException("Unavailable"));
+    var assessment = DamageAssessment.builder().assessmentId(UUID.randomUUID())
+        .propertyId(UUID.randomUUID()).damageAmount(BigDecimal.TEN).build();
+    assertThatThrownBy(() -> new CompensationEventProcessor(ledger, rest)
+        .handleDamageAssessed(assessment)).isInstanceOf(IllegalStateException.class);
+    verifyNoInteractions(ledger);
   }
 }

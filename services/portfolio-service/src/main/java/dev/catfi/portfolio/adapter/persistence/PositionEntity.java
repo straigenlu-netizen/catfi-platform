@@ -7,7 +7,8 @@ import java.util.UUID;
 import lombok.*;
 
 @Entity
-@Table(name = "portfolio_positions")
+@Table(name = "portfolio_positions", uniqueConstraints =
+    @jakarta.persistence.UniqueConstraint(name = "uq_portfolio_property_symbol", columnNames = {"property_id", "asset_symbol"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,7 +19,9 @@ public class PositionEntity {
   @GeneratedValue(strategy = GenerationType.AUTO)
   private UUID id;
 
+  @Column(name = "property_id", nullable = false)
   private UUID propertyId;
+  @Column(name = "asset_symbol", nullable = false)
   private String assetSymbol;
 
   @Column(precision = 28, scale = 8, nullable = false)

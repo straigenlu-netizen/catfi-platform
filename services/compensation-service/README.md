@@ -18,7 +18,7 @@ Damage service supplies assessments. Property-policy service supplies trusted co
 
 ## Important details
 
-POST /api/v1/compensations/preview requires compensation:preview scope. Health is public; metrics require metrics:read. Liquibase manages storage. Coverage is applied before deductible; HALF_EVEN rounding preserves cents. Outbox, duplicate suppression and concurrent policy-budget reservation remain future work.
+POST /api/v1/compensations/preview requires compensation:preview scope. Health is public; metrics require metrics:read. Liquibase manages storage. Coverage is applied before deductible; HALF_EVEN rounding preserves cents. Compensation replay detection and policy reservation IDs are implemented, but durable compensation outbox and cross-service atomicity remain future work. Policy reservation is synchronized only within one demo JVM.
 
 ## Verification and operation
 
