@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface PaymentRepository extends JpaRepository<PaymentEntity, UUID> {
   List<PaymentEntity> findByPropertyIdOrderByInitiatedAtDesc(UUID propertyId);
+  java.util.Optional<PaymentEntity> findByCompensationResultId(UUID compensationResultId);
+  List<PaymentEntity> findTop100ByEventPublishedFalseOrderByInitiatedAtAsc();
 }

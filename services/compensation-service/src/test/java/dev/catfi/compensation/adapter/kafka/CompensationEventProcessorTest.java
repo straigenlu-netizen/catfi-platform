@@ -45,7 +45,7 @@ class CompensationEventProcessorTest {
             .damageAmount(new BigDecimal("20000"))
             .build());
     var entity = ArgumentCaptor.forClass(CompensationResultEntity.class);
-    verify(repository).save(entity.capture());
+    verify(repository).saveAndFlush(entity.capture());
     assertThat(entity.getValue().getAmount()).isEqualByComparingTo("13000");
     assertThat(entity.getValue().getDamageAssessmentId()).isEqualTo(damage);
     verify(kafka)
@@ -72,10 +72,13 @@ class CompensationEventProcessorTest {
             () ->
                 processor.handleDamageAssessed(
                     DamageAssessment.builder()
+                        .assessmentId(UUID.randomUUID())
                         .propertyId(UUID.randomUUID())
                         .damageAmount(BigDecimal.TEN)
                         .build()))
         .isInstanceOf(IllegalStateException.class);
-    verifyNoInteractions(repository, kafka);
+    verify(repository).findByDamageAssessmentId(any(UUID.class));
+    verifyNoMoreInteractions(repository);
+    verifyNoInteractions(kafka);
   }
 }

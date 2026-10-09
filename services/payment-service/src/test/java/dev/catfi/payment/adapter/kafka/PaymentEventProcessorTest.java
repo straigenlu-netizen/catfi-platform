@@ -18,6 +18,8 @@ class PaymentEventProcessorTest {
   void shouldPayOnlyPayoutPartAndPersistBeforePublishing() {
     var repository = mock(PaymentRepository.class);
     KafkaTemplate<String, Payment> kafka = mock(KafkaTemplate.class);
+    when(kafka.send(anyString(), anyString(), any(Payment.class)))
+        .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
     var processor = new PaymentEventProcessor(new PaymentService(), repository, kafka);
     var id = UUID.randomUUID();
     var property = UUID.randomUUID();
@@ -31,7 +33,7 @@ class PaymentEventProcessorTest {
             .build();
     processor.handleCompensationCalculated(result);
     var entity = ArgumentCaptor.forClass(PaymentEntity.class);
-    verify(repository).save(entity.capture());
+    verify(repository).saveAndFlush(entity.capture());
     assertThat(entity.getValue().getAmount()).isEqualByComparingTo("30");
     var event = ArgumentCaptor.forClass(Payment.class);
     verify(kafka).send(eq("catfi.payment.completed"), eq(property.toString()), event.capture());
@@ -43,7 +45,7 @@ class PaymentEventProcessorTest {
   void shouldNotPublishWhenPersistenceFails() {
     var repository = mock(PaymentRepository.class);
     KafkaTemplate<String, Payment> kafka = mock(KafkaTemplate.class);
-    when(repository.save(any())).thenThrow(new IllegalStateException("Database unavailable"));
+    when(repository.saveAndFlush(any())).thenThrow(new IllegalStateException("Database unavailable"));
     var processor = new PaymentEventProcessor(new PaymentService(), repository, kafka);
     var result =
         CompensationResult.builder()

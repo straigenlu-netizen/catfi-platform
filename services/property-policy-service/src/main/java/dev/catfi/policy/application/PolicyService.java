@@ -14,6 +14,9 @@ import org.springframework.stereotype.Service;
 public class PolicyService {
   private final Map<UUID, Property> propertyStore = new ConcurrentHashMap<>();
   private final Map<UUID, InsurancePolicy> policyStore = new ConcurrentHashMap<>();
+  // Demo-only inbox: stable across Kafka replays within one service lifetime.
+  private final Map<UUID, Reservation> reservations = new ConcurrentHashMap<>();
+  private record Reservation(UUID propertyId, BigDecimal amount) {}
 
   public java.util.List<Property> getAllProperties() {
     return propertyStore.values().stream()
@@ -39,12 +42,26 @@ public class PolicyService {
   }
 
   public InsurancePolicy reserveCompensation(UUID propertyId, BigDecimal amount) {
+    return reserveCompensation(propertyId, amount, null);
+  }
+
+  public synchronized InsurancePolicy reserveCompensation(UUID propertyId, BigDecimal amount,
+                                                           UUID reservationId) {
     if (amount == null || amount.signum() < 0) {
       throw new IllegalArgumentException("Reservation amount must be non-negative");
     }
+    if (reservationId != null) {
+      Reservation prior = reservations.get(reservationId);
+      if (prior != null) {
+        if (!prior.propertyId().equals(propertyId) || prior.amount().compareTo(amount) != 0) {
+          throw new IllegalArgumentException("Reservation ID reused with different terms");
+        }
+        return getActivePolicyForProperty(propertyId);
+      }
+    }
 
     InsurancePolicy current = getActivePolicyForProperty(propertyId);
-    return policyStore.compute(
+    InsurancePolicy updated = policyStore.compute(
         current.getPolicyId(),
         (policyId, policy) -> {
           if (policy == null || !policy.isActive() || !propertyId.equals(policy.getPropertyId())) {
@@ -70,6 +87,8 @@ public class PolicyService {
               .active(policy.isActive())
               .build();
         });
+    if (reservationId != null) reservations.put(reservationId, new Reservation(propertyId, amount));
+    return updated;
   }
 
   public Property getProperty(UUID propertyId) {

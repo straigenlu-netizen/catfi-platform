@@ -115,8 +115,8 @@ function CustomerHome() {
         <PortalCard title={t("My profile")}>
             {profile.isPending ? <Loading /> : profile.isError ? <ErrorNotice /> : <Box component="form" onSubmit={e => { e.preventDefault(); update.mutate(); }}>
                 <Stack spacing={2} sx={{ maxWidth: 440 }}>
-                    <TextField label={t("Full name")} value={name} onChange={e => setName(e.target.value)} required inputProps={{ maxLength: 120 }} />
-                    <TextField label={t("Email")} type="email" value={email} onChange={e => setEmail(e.target.value)} required inputProps={{ maxLength: 254 }} />
+                    <TextField label={t("Full name")} value={name} onChange={e => setName(e.target.value)} required slotProps={{ htmlInput: { maxLength: 120 } }} />
+                    <TextField label={t("Email")} type="email" value={email} onChange={e => setEmail(e.target.value)} required slotProps={{ htmlInput: { maxLength: 254 } }} />
                     <Typography color="text.secondary">{t("Risk profile")}: {label(profile.data!.riskProfile)} ({t("Read-only")})</Typography>
                     {update.isSuccess && <Alert severity="success">{t("Profile updated.")}</Alert>}
                     {update.isError && <Alert severity="error">{t("Could not save your profile.")}</Alert>}
@@ -127,7 +127,7 @@ function CustomerHome() {
         <PortalCard title={t("My policies and claims")}>
             {policies.isPending ? <Loading /> : policies.isError ? <ErrorNotice /> : !policies.data?.length ?
                 <Typography>{t("No policies found.")}</Typography> : policies.data.map(item => <Box key={item.property.propertyId} sx={{ mb: 2 }}>
-                    <Typography variant="subtitle1" fontWeight="bold">{item.property.address}</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>{item.property.address}</Typography>
                     <Typography>{t("Policy status")}: {item.policy?.active ? t("Active") : t("No active policy")}</Typography>
                     <Typography>{t("Policy limit")}: {item.policy ? money(item.policy.policyLimit) : "—"}</Typography>
                     <Typography>{t("Claim status")}: {label(item.report?.status ?? "SAFE")}</Typography>

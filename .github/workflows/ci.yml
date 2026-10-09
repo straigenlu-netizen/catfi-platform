@@ -65,4 +65,5 @@ jobs:
             services/**/target/failsafe-reports/
             web-ui/playwright-report/
             web-ui/test-results/
+            web-ui/test-results-live.log
           retention-days: 7

@@ -42,8 +42,10 @@ public class PolicyController {
   @PostMapping("/property/{propertyId}/reserve")
   public InsurancePolicy reserveCompensation(
       @PathVariable UUID propertyId, @Valid @RequestBody ReservationRequest request) {
-    return policyService.reserveCompensation(propertyId, request.amount());
+    return policyService.reserveCompensation(propertyId, request.amount(), request.reservationId());
   }
 
-  public record ReservationRequest(@NotNull @DecimalMin("0.00") BigDecimal amount) {}
+  public record ReservationRequest(@NotNull @DecimalMin("0.00") BigDecimal amount, UUID reservationId) {
+    public ReservationRequest(BigDecimal amount) { this(amount, null); }
+  }
 }

@@ -35,6 +35,27 @@ public class CompensationEventProcessor {
   public void handleDamageAssessed(DamageAssessment assessment) {
     log.info("Received damage assessment for property {}: {} EUR",
         assessment.getPropertyId(), assessment.getDamageAmount());
+    if (assessment.getAssessmentId() == null) {
+      throw new IllegalArgumentException("Assessment ID is required for idempotency");
+    }
+    var previouslyCalculated = repository.findByDamageAssessmentId(assessment.getAssessmentId());
+    if (previouslyCalculated.isPresent()) {
+      var saved = previouslyCalculated.get();
+      if (!saved.getPropertyId().equals(assessment.getPropertyId())
+          || saved.getDamageAmount().compareTo(assessment.getDamageAmount()) != 0) {
+        throw new IllegalStateException("Conflicting replay for damage assessment " + assessment.getAssessmentId());
+      }
+      var amountToPay = saved.getAmount().multiply(new BigDecimal("0.5"))
+          .setScale(2, java.math.RoundingMode.HALF_EVEN);
+      var replay = CompensationResult.builder().resultId(saved.getId())
+          .damageAssessmentId(saved.getDamageAssessmentId()).propertyId(saved.getPropertyId())
+          .totalCompensation(saved.getAmount()).amountToPay(amountToPay)
+          .amountToInvest(saved.getAmount().subtract(amountToPay))
+          .coverageRate(saved.getCoverageRate()).deductible(saved.getDeductible())
+          .scenario(PayoutScenario.HYBRID).calculatedAt(saved.getCalculatedAt()).build();
+      kafkaTemplate.send(OUTPUT_TOPIC, replay.getPropertyId().toString(), replay);
+      return;
+    }
 
     String policyEndpoint = policyUrl + "/api/v1/policies/property/" + assessment.getPropertyId() + "/active";
     TrustedPolicy policy = restTemplate.getForObject(policyEndpoint, TrustedPolicy.class);
@@ -50,7 +71,7 @@ public class CompensationEventProcessor {
         assessment.getPropertyId(), assessment.getAssessmentId(), assessment.getDamageAmount(),
         terms, PayoutScenario.HYBRID);
 
-    reservePolicyBudget(result.getPropertyId(), result.getTotalCompensation());
+    reservePolicyBudget(result.getPropertyId(), result.getTotalCompensation(), assessment.getAssessmentId());
 
     CompensationResultEntity entity = CompensationResultEntity.builder()
         .id(result.getResultId()).propertyId(result.getPropertyId())
@@ -58,19 +79,19 @@ public class CompensationEventProcessor {
         .damageAmount(assessment.getDamageAmount()).coverageRate(terms.getCoverageRate())
         .deductible(terms.getDeductible()).calculatedAt(result.getCalculatedAt()).build();
 
-    repository.save(entity);
+    repository.saveAndFlush(entity);
     log.info("Compensation calculated for property {}: Total {} EUR (Pay: {}, Invest: {})",
         result.getPropertyId(), result.getTotalCompensation(),
         result.getAmountToPay(), result.getAmountToInvest());
     kafkaTemplate.send(OUTPUT_TOPIC, result.getPropertyId().toString(), result);
   }
 
-  private void reservePolicyBudget(UUID propertyId, BigDecimal amount) {
+  private void reservePolicyBudget(UUID propertyId, BigDecimal amount, UUID assessmentId) {
     String endpoint = policyUrl + "/api/v1/policies/property/" + propertyId + "/reserve";
-    restTemplate.postForObject(endpoint, new PolicyReservationRequest(amount), TrustedPolicy.class);
+    restTemplate.postForObject(endpoint, new PolicyReservationRequest(amount, assessmentId), TrustedPolicy.class);
   }
 
-  public record PolicyReservationRequest(BigDecimal amount) {}
+  public record PolicyReservationRequest(BigDecimal amount, UUID reservationId) {}
 
   @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
   public record TrustedPolicy(

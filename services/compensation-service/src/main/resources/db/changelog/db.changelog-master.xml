@@ -1,4 +1,5 @@
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
   <include file="001-compensation.sql" relativeToChangelogFile="true"/>
   <include file="002-compensation-results.sql" relativeToChangelogFile="true"/>
+  <include file="003-assessment-idempotency.sql" relativeToChangelogFile="true"/>
 </databaseChangeLog>

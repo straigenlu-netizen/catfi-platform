@@ -7,7 +7,8 @@ import java.util.UUID;
 import lombok.*;
 
 @Entity
-@Table(name = "payments")
+@Table(name = "payments", uniqueConstraints = @UniqueConstraint(
+    name = "uq_payments_compensation", columnNames = "compensation_result_id"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,4 +25,8 @@ public class PaymentEntity {
 
   private Instant initiatedAt;
   private Instant completedAt;
+  // The persisted row doubles as a durable payment-completed event outbox.
+  @Builder.Default
+  @Column(name = "event_published", columnDefinition = "boolean default true")
+  private boolean eventPublished = false;
 }

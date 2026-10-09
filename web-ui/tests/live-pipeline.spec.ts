@@ -11,6 +11,11 @@ test("browser trigger reaches the BFF and the Kafka pipeline returns a fresh fin
     const previous = await (
         await request.get(`/api/ui/properties/${id}`)
     ).json();
+    // This isolated Kafka/BFF test uses a permit-all test filter with CSRF disabled.
+    // The real BFF CSRF handshake is covered by dedicated Spring Security tests.
+    await page.route("**/api/auth/csrf", (route) =>
+        route.fulfill({ json: { token: "integration-test-csrf" } }),
+    );
     await page.goto("/simulation");
     await page.getByRole("button", { name: "Run simulation" }).click();
     await expect(page.getByText(/Event ID:/)).toBeVisible();

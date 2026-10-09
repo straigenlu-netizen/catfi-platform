@@ -1,5 +1,9 @@
 # compensation-service
 
+## Replay safety
+
+A unique Liquibase index on `damage_assessment_id` prevents multiple persisted compensations for the same assessment. Redelivery re-emits the original compensation result ID without a second policy reservation. Policy reservation requests carry the assessment ID as an idempotency key; the policy-side reservation inbox is still in memory. A crash after budget reservation and before compensation persistence remains a cross-service consistency risk requiring a durable inbox/outbox and reconciliation.
+
 ## Role in CatFi
 
 Calculates compensation from assessed damage and trusted policy terms, then splits compensation into payout and investment branches.

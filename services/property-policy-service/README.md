@@ -1,5 +1,9 @@
 # property-policy-service
 
+## Reservation retries
+
+`POST /api/v1/policies/property/{id}/reserve` accepts an optional `reservationId` UUID in addition to `amount`. Repeating the same ID, amount, and property in the running demo process returns the current policy without charging the limit again. Conflicting reuse is rejected. The reservation ledger and policies currently live in memory and reset on restart; production needs transactional durable storage.
+
 ## Role in CatFi
 
 Owns the property inventory and insurance-contract data used for trusted financial calculations.
