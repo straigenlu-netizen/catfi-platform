@@ -1,0 +1,79 @@
+{
+  "title": "CatFi BFF · Request Health",
+  "uid": "catfi-bff-health",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "15s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Requests/sec by route and outcome",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "catfi-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (route, outcome) (rate(catfi_bff_requests_total[5m]))",
+          "legendFormat": "{{route}} · {{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "5xx response rate",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "catfi-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(catfi_bff_requests_total{outcome=\"5xx\"}[5m]))",
+          "legendFormat": "5xx/sec"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "BFF HTTP p95 latency (seconds)",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "catfi-prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{application=\"catfi-bff\"}[5m])))",
+          "legendFormat": "p95"
+        }
+      ]
+    }
+  ]
+}

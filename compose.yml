@@ -223,7 +223,32 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
     depends_on:
       redis: {condition: service_healthy}
+  prometheus:
+    image: prom/prometheus:v3.6.0
+    profiles: [monitoring]
+    ports: ["127.0.0.1:9091:9090"]
+    volumes:
+      - ./infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/monitoring/agent-password.txt:/etc/prometheus/agent-password:ro
+      - prometheus-data:/prometheus
+    depends_on: [catfi-bff]
+  grafana:
+    image: grafana/grafana:12.1.1
+    profiles: [monitoring]
+    ports: ["127.0.0.1:3000:3000"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /etc/grafana/admin-password
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./infra/monitoring/grafana-admin-password.txt:/etc/grafana/admin-password:ro
+      - ./infra/monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./infra/monitoring/grafana/dashboards/provisioning.yml:/etc/grafana/provisioning/dashboards/catfi.yml:ro
+      - ./infra/monitoring/grafana/dashboards/catfi-bff.json:/var/lib/grafana/dashboards/catfi-bff.json:ro
+      - grafana-data:/var/lib/grafana
+    depends_on: [prometheus]
 volumes:
   compensation-db:
   mongo-data:
   redis-data:
+  prometheus-data:
+  grafana-data:

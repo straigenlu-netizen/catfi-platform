@@ -39,12 +39,15 @@ public class AgentSecurityConfiguration {
   SecurityFilterChain securityFilterChain(HttpSecurity http, AuditService audit) throws Exception {
     http.csrf(csrf -> {})
         .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+            .requestMatchers("/actuator/**").hasRole("AGENT")
             .requestMatchers("/api/auth/login", "/api/auth/csrf").permitAll()
             .requestMatchers("/api/customer/**").hasRole("CUSTOMER")
             .requestMatchers("/api/agent/**", "/api/ui/**").hasRole("AGENT")
             .anyRequest().authenticated())
         .exceptionHandling(ex -> ex.authenticationEntryPoint(
             (request, response, exception) -> response.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
+        .httpBasic(org.springframework.security.config.Customizer.withDefaults())
         .formLogin(form -> form
             .loginProcessingUrl("/api/auth/login")
             .successHandler((request, response, authentication) -> {

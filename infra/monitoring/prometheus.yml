@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: catfi-bff
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["catfi-bff:8087"]
+    basic_auth:
+      username: demo.agent
+      password_file: /etc/prometheus/agent-password

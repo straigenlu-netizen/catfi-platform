@@ -27,6 +27,17 @@ class AgentSecurityConfigurationTest {
   @MockitoBean javax.sql.DataSource dataSource;
 
   @Test
+  void shouldRejectUnauthenticatedMetricsScrape() throws Exception {
+    mvc.perform(get("/actuator/prometheus")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void shouldRejectCustomerMetricsScrape() throws Exception {
+    mvc.perform(get("/actuator/prometheus").with(user("customer").roles("CUSTOMER")))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
   void shouldRejectAnonymousUiRequest() throws Exception {
     mvc.perform(get("/api/ui/dashboard"))
         .andExpect(status().isUnauthorized());

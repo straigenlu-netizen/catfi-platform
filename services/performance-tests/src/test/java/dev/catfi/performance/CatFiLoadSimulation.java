@@ -8,43 +8,59 @@ import io.gatling.javaapi.core.Simulation;
 import java.time.Duration;
 import java.util.ArrayList;
 
+/** BFF end-to-end arrival rate, including one login per simulated request. */
 public class CatFiLoadSimulation extends Simulation {
-  private static final double TARGET_RPS = Double.parseDouble(System.getProperty("rps", "100"));
-  private static final long DURATION_SECONDS = Long.parseLong(System.getProperty("durationSeconds", "120"));
-  private static final double WRITE_PERCENT = Double.parseDouble(System.getProperty("writePercent", "5"));
+  private static final LoadPlan PLAN = LoadPlan.fromSystemProperties();
   private static final String BASE_URL = System.getProperty("baseUrl", "http://localhost:8087");
+  private static final String AGENT_USER = System.getenv().getOrDefault("CATFI_LOAD_AGENT_USER", "demo.agent");
+  private static final String AGENT_PASSWORD = System.getenv("CATFI_LOAD_AGENT_PASSWORD");
 
   {
-    if (TARGET_RPS <= 0 || DURATION_SECONDS <= 0 || WRITE_PERCENT < 0 || WRITE_PERCENT > 100) {
-      throw new IllegalArgumentException("Use rps > 0, durationSeconds > 0 and writePercent between 0 and 100");
+    if (AGENT_PASSWORD == null || AGENT_PASSWORD.isBlank()) {
+      throw new IllegalArgumentException("Set CATFI_LOAD_AGENT_PASSWORD (never put passwords in the simulation source)");
     }
+    Duration duration = Duration.ofSeconds(PLAN.durationSeconds());
+    var httpProtocol = http.baseUrl(BASE_URL)
+        .acceptHeader("application/json")
+        .contentTypeHeader("application/json");
 
-    double writeRps = TARGET_RPS * WRITE_PERCENT / 100.0;
-    double readRps = TARGET_RPS - writeRps;
-    Duration duration = Duration.ofSeconds(DURATION_SECONDS);
-    var httpProtocol = http.baseUrl(BASE_URL).acceptHeader("application/json").contentTypeHeader("application/json");
+    // Spring Security protects the login itself with a session-bound CSRF token.
+    var authenticatedAgent = exec(http("GET CSRF token")
+            .get("/api/auth/csrf")
+            .check(status().is(200), jsonPath("$.token").saveAs("csrfToken")))
+        .exec(http("Agent login")
+            .post("/api/auth/login")
+            .header("X-XSRF-TOKEN", "#{csrfToken}")
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .formParam("username", AGENT_USER)
+            .formParam("password", AGENT_PASSWORD)
+            .check(status().is(204)));
 
-    var login = exec(http("Agent login").post("/api/auth/login")
-        .formParam("username", "AgentCRM1").formParam("password", "agent_391")
-        .check(status().is(204)));
     var dashboard = scenario("dashboard-read")
-        .exec(login)
+        .exec(authenticatedAgent)
         .exec(http("GET dashboard").get("/api/ui/dashboard").check(status().is(200)));
+
     var disaster = scenario("disaster-write")
-        .exec(login)
-        .exec(http("POST disaster simulation").post("/api/ui/trigger-disaster")
+        .exec(authenticatedAgent)
+        .exec(http("POST disaster simulation")
+            .post("/api/ui/trigger-disaster")
+            .header("X-XSRF-TOKEN", "#{csrfToken}")
             .body(StringBody("{\"type\":\"EARTHQUAKE\",\"latitude\":35.6762,\"longitude\":139.6503,\"intensity\":6.0}"))
-            .check(status().in(200, 202)));
+            .check(status().is(200)));
 
     var population = new ArrayList<PopulationBuilder>();
-    if (readRps > 0) population.add(dashboard.injectOpen(constantUsersPerSec(readRps).during(duration)));
-    if (writeRps > 0) population.add(disaster.injectOpen(constantUsersPerSec(writeRps).during(duration)));
+    if (PLAN.readRps() > 0) {
+      population.add(dashboard.injectOpen(constantUsersPerSec(PLAN.readRps()).during(duration)));
+    }
+    if (PLAN.writeRps() > 0) {
+      population.add(disaster.injectOpen(constantUsersPerSec(PLAN.writeRps()).during(duration)));
+    }
 
     setUp(population.toArray(PopulationBuilder[]::new))
         .protocols(httpProtocol)
         .assertions(
             global().failedRequests().percent().lt(1.0),
-            global().responseTime().percentile(95.0).lt(500),
-            global().responseTime().percentile(99.0).lt(1000));
+            details("GET dashboard").responseTime().percentile(95.0).lt(500),
+            details("GET dashboard").responseTime().percentile(99.0).lt(1000));
   }
 }

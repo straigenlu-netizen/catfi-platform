@@ -1,5 +1,14 @@
 # Validation
 
+## Stage 4 checks (pending runtime verification)
+
+The Stage 4 patch adds a Gatling plan JUnit test, BFF bounded-cardinality metric
+unit tests, an actuator access-control regression test, and a Python monitoring
+configuration test. Run these plus the existing reactor / UI checks after applying.
+The Prometheus/Grafana Docker profile and Gatling 100/1000/5000 target rates have
+**not** been performance-validated by this document. Do not confuse test targets
+with measured throughput or achieved SLOs.
+
 ## 2026-10-06 — AWS implementation, current verification
 
 Environment: Java 21.0.12.1, Maven 3.9.11, Node 24, Chromium 141, DynamoDB Local 1.25.1. Current evidence is also recorded in [docs/aws/VERIFICATION_RESULTS.json](docs/aws/VERIFICATION_RESULTS.json).
