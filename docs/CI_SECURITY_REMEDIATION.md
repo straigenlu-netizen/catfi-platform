@@ -1,8 +1,8 @@
 # CI security remediation
 
-The application remains on Java 21. Spring Boot 4.1.1 and Spring Cloud 2025.1.3 replace the unsupported community Spring Boot 3.5 line. This updates Spring Framework, Spring Security and Tomcat together, rather than combining incompatible framework generations. PostgreSQL JDBC is pinned to 42.7.14 and Bouncy Castle to 1.85.
+The application remains on Java 21. Spring Boot 4.1.1 and Spring Cloud 2025.1.3 replace the unsupported community Spring Boot 3.5 line. This updates Spring Framework, Spring Security and Tomcat together, rather than combining incompatible framework generations. Security patch overrides pin PostgreSQL JDBC 42.7.14, Bouncy Castle 1.85, Tomcat 11.0.25, Jackson 2.22.3 / 3.1.7 and lz4-java 1.11.4.
 
-Classic starters and the Jackson 2 compatibility module are an explicit migration bridge. Existing Kafka JSON contracts retain their Jackson 2 serializers. Spring Boot test imports use the modular packages and Spring Test MockitoBean replaces the removed MockBean annotation. Future work should remove the classic starters and migrate the Jackson 2 contracts deliberately.
+Focused Spring Boot 4 starters replace the classic auto-configuration classpath. The Jackson 2 compatibility module is an explicit migration bridge. Existing Kafka JSON contracts retain their Jackson 2 serializers. Spring Boot test imports use the modular packages and Spring Test MockitoBean replaces the removed MockBean annotation. Future work should migrate the Jackson 2 contracts deliberately.
 
 The Kafka pipeline integration fixture exercises a real PostgreSQL compensation ledger and transactional outbox publisher, alongside embedded Kafka. Some repository adapters remain test doubles; the service-specific PostgreSQL integration tests cover full JPA persistence and concurrency. It is not an externally deployed end-to-end environment.
 

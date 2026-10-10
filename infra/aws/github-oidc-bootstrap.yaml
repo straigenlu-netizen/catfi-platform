@@ -288,7 +288,6 @@ Resources:
               - Arn
           - Effect: Allow
             Action:
-            - kms:CreateKey
             - kms:DescribeKey
             - kms:GetKeyPolicy
             - kms:PutKeyPolicy
@@ -299,7 +298,23 @@ Resources:
             - kms:ListResourceTags
             - kms:ScheduleKeyDeletion
             - kms:CancelKeyDeletion
+            Resource:
+              Fn::Sub: arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*
+            Condition:
+              StringLike:
+                aws:ResourceTag/CatFiStack:
+                - Ref: StackPrefix
+                - Fn::Sub: ${StackPrefix}-*
+          - Effect: Allow
+            Action:
+            - kms:CreateKey
+            - kms:TagResource
             Resource: '*'
+            Condition:
+              StringLike:
+                aws:RequestTag/CatFiStack:
+                - Ref: StackPrefix
+                - Fn::Sub: ${StackPrefix}-*
   GitHubDeployRole:
     Type: AWS::IAM::Role
     Properties:
@@ -443,6 +458,10 @@ Resources:
               Fn::Sub: arn:${AWS::Partition}:iam::${AWS::AccountId}:root
           Action: kms:*
           Resource: '*'
+      Tags:
+      - Key: CatFiStack
+        Value:
+          Ref: AWS::StackName
 Outputs:
   DeployRoleArn:
     Value:

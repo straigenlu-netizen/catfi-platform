@@ -995,6 +995,10 @@ Resources:
             StringEquals:
               aws:SourceAccount:
                 Ref: AWS::AccountId
+      Tags:
+      - Key: CatFiStack
+        Value:
+          Ref: AWS::StackName
   WeatherScheduleRole:
     Type: AWS::IAM::Role
     Properties:
