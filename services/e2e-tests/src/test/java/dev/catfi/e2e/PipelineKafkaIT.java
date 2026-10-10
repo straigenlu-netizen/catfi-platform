@@ -33,8 +33,8 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.data.jpa.autoconfigure.JpaRepositoriesAutoConfiguration;
-import org.springframework.boot.data.mongodb.autoconfigure.MongoDataAutoConfiguration;
+import org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration;
+import org.springframework.boot.data.mongodb.autoconfigure.DataMongoAutoConfiguration;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.boot.liquibase.autoconfigure.LiquibaseAutoConfiguration;
 import org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration;
@@ -110,10 +110,10 @@ class PipelineKafkaIT {
   @EnableAutoConfiguration(
       exclude = {
         HibernateJpaAutoConfiguration.class,
-        JpaRepositoriesAutoConfiguration.class,
+        DataJpaRepositoriesAutoConfiguration.class,
         LiquibaseAutoConfiguration.class,
         MongoAutoConfiguration.class,
-        MongoDataAutoConfiguration.class
+        DataMongoAutoConfiguration.class
       })
   @org.springframework.scheduling.annotation.EnableScheduling
   @EnableFeignClients(clients = DisasterClient.class)
