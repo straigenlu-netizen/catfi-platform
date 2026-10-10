@@ -194,7 +194,7 @@ services:
       disaster-simulator: {condition: service_started}
   web-ui:
     build: ./web-ui
-    ports: ["127.0.0.1:5173:80"]
+    ports: ["127.0.0.1:5173:8080"]
     depends_on: [catfi-bff]
   market-data-service:
     <<: *backend

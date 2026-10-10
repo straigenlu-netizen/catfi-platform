@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: 'CatFi AWS learning stack: durable reporting, authenticated exports,
-  workflows and scheduled weather.'
+Description: 'CatFi AWS learning stack: durable reporting, authenticated exports, workflows and scheduled
+  weather.'
 Parameters:
   EmailFrom:
     Type: String
@@ -155,8 +155,13 @@ Resources:
         RestrictPublicBuckets: true
       BucketEncryption:
         ServerSideEncryptionConfiguration:
-        - ServerSideEncryptionByDefault:
-            SSEAlgorithm: AES256
+        - BucketKeyEnabled: true
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: aws:kms
+            KMSMasterKeyID:
+              Fn::GetAtt:
+              - DataKey
+              - Arn
       VersioningConfiguration:
         Status: Enabled
       LifecycleConfiguration:
@@ -190,31 +195,52 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       MessageRetentionPeriod: 1209600
-      SqsManagedSseEnabled: true
+      KmsMasterKeyId:
+        Fn::GetAtt:
+        - DataKey
+        - Arn
+      KmsDataKeyReusePeriodSeconds: 300
   StreamDLQ:
     Type: AWS::SQS::Queue
     Properties:
       MessageRetentionPeriod: 1209600
-      SqsManagedSseEnabled: true
+      KmsMasterKeyId:
+        Fn::GetAtt:
+        - DataKey
+        - Arn
+      KmsDataKeyReusePeriodSeconds: 300
   SchedulerDLQ:
     Type: AWS::SQS::Queue
     Properties:
       MessageRetentionPeriod: 1209600
-      SqsManagedSseEnabled: true
+      KmsMasterKeyId:
+        Fn::GetAtt:
+        - DataKey
+        - Arn
+      KmsDataKeyReusePeriodSeconds: 300
   ExportQueue:
     Type: AWS::SQS::Queue
     Properties:
       VisibilityTimeout: 180
       MessageRetentionPeriod: 345600
-      SqsManagedSseEnabled: true
       RedrivePolicy:
         deadLetterTargetArn:
           Fn::GetAtt:
           - ExportDLQ
           - Arn
         maxReceiveCount: 5
+      KmsMasterKeyId:
+        Fn::GetAtt:
+        - DataKey
+        - Arn
+      KmsDataKeyReusePeriodSeconds: 300
   Alerts:
     Type: AWS::SNS::Topic
+    Properties:
+      KmsMasterKeyId:
+        Fn::GetAtt:
+        - DataKey
+        - Arn
   AlertSubscription:
     Type: AWS::SNS::Subscription
     Condition: MailEnabled
@@ -227,8 +253,7 @@ Resources:
   WeatherSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Description: Set apiKey outside source control; leave schedule disabled until
-        configured.
+      Description: Set apiKey outside source control; leave schedule disabled until configured.
       SecretString: '{"apiKey":""}'
   UserPool:
     Type: AWS::Cognito::UserPool
@@ -315,6 +340,22 @@ Resources:
           - s3:GetObject
           Resource:
           - Fn::Sub: ${ExportBucket.Arn}/exports/*
+      - Statement:
+        - Effect: Allow
+          Action:
+          - kms:Decrypt
+          Resource:
+          - Fn::GetAtt:
+            - DataKey
+            - Arn
+      - Statement:
+        - Effect: Allow
+          Action:
+          - kms:Decrypt
+          Resource:
+          - Fn::GetAtt:
+            - DataKey
+            - Arn
       Environment:
         Variables:
           EXPORT_BUCKET:
@@ -383,6 +424,15 @@ Resources:
           - Fn::GetAtt:
             - StreamDLQ
             - Arn
+      - Statement:
+        - Effect: Allow
+          Action:
+          - kms:Decrypt
+          - kms:GenerateDataKey
+          Resource:
+          - Fn::GetAtt:
+            - DataKey
+            - Arn
       Environment:
         Variables:
           EXPORT_QUEUE_URL:
@@ -445,6 +495,15 @@ Resources:
           - s3:PutObject
           Resource:
           - Fn::Sub: ${ExportBucket.Arn}/exports/*
+      - Statement:
+        - Effect: Allow
+          Action:
+          - kms:Decrypt
+          - kms:GenerateDataKey
+          Resource:
+          - Fn::GetAtt:
+            - DataKey
+            - Arn
       Environment:
         Variables:
           EXPORT_BUCKET:
@@ -484,6 +543,14 @@ Resources:
           - states:StartExecution
           Resource:
           - Ref: ExportWorkflow
+      - Statement:
+        - Effect: Allow
+          Action:
+          - kms:Decrypt
+          Resource:
+          - Fn::GetAtt:
+            - DataKey
+            - Arn
       Environment:
         Variables:
           WORKFLOW_ARN:
@@ -544,6 +611,15 @@ Resources:
           Resource:
           - Fn::GetAtt:
             - StreamDLQ
+            - Arn
+      - Statement:
+        - Effect: Allow
+          Action:
+          - kms:Decrypt
+          - kms:GenerateDataKey
+          Resource:
+          - Fn::GetAtt:
+            - DataKey
             - Arn
       Environment:
         Variables:
@@ -626,6 +702,15 @@ Resources:
           Resource:
           - Fn::GetAtt:
             - SchedulerDLQ
+            - Arn
+      - Statement:
+        - Effect: Allow
+          Action:
+          - kms:Decrypt
+          - kms:GenerateDataKey
+          Resource:
+          - Fn::GetAtt:
+            - DataKey
             - Arn
       Environment:
         Variables:
@@ -862,6 +947,50 @@ Resources:
       TreatMissingData: notBreaching
       AlarmActions:
       - Ref: Alerts
+  DataKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: CatFi encrypted data at rest
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: EnableAccountIAM
+          Effect: Allow
+          Principal:
+            AWS:
+              Fn::Sub: arn:${AWS::Partition}:iam::${AWS::AccountId}:root
+          Action: kms:*
+          Resource: '*'
+        - Sid: CloudWatchAlarms
+          Effect: Allow
+          Principal:
+            Service: cloudwatch.amazonaws.com
+          Action:
+          - kms:Decrypt
+          - kms:GenerateDataKey*
+          Resource: '*'
+          Condition:
+            StringEquals:
+              aws:SourceAccount:
+                Ref: AWS::AccountId
+            ArnLike:
+              aws:SourceArn:
+                Fn::Sub: arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:*
+        - Sid: SchedulerDeadLetter
+          Effect: Allow
+          Principal:
+            Service: scheduler.amazonaws.com
+          Action:
+          - kms:Decrypt
+          - kms:GenerateDataKey*
+          Resource: '*'
+          Condition:
+            StringEquals:
+              aws:SourceAccount:
+                Ref: AWS::AccountId
 Outputs:
   ApiUrl:
     Value:

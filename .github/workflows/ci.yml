@@ -33,7 +33,7 @@ jobs:
       - name: Make Maven Wrapper executable
         run: chmod +x mvnw
       - name: Validate monitoring and load-test configuration
-        run: python3 -m unittest discover -s tests -p 'test_stage4_observability.py'
+        run: python3 -m unittest discover -s tests
       - run: npm ci
         working-directory: web-ui
       - run: npm test && npm run build

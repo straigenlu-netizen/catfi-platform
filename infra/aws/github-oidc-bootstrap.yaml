@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'One-time administrator bootstrap: GitHub OIDC role, CloudFormation execution
-  role, artifacts and ECR.'
+Description: 'One-time administrator bootstrap: GitHub OIDC role, CloudFormation execution role, artifacts
+  and ECR.'
 Parameters:
   GitHubRepository:
     Type: String
@@ -37,8 +37,13 @@ Resources:
         RestrictPublicBuckets: true
       BucketEncryption:
         ServerSideEncryptionConfiguration:
-        - ServerSideEncryptionByDefault:
-            SSEAlgorithm: AES256
+        - BucketKeyEnabled: true
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: aws:kms
+            KMSMasterKeyID:
+              Fn::GetAtt:
+              - ArtifactsKey
+              - Arn
       LifecycleConfiguration:
         Rules:
         - Id: Artifacts
@@ -53,8 +58,7 @@ Resources:
       ImageScanningConfiguration:
         ScanOnPush: true
       LifecyclePolicy:
-        LifecyclePolicyText: '{"rules":[{"rulePriority":1,"description":"Keep last
-          10 learning images","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}'
+        LifecyclePolicyText: '{"rules":[{"rulePriority":1,"description":"Keep last 10 learning images","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}'
     UpdateReplacePolicy: Retain
   CloudFormationRole:
     Type: AWS::IAM::Role
@@ -274,6 +278,28 @@ Resources:
             - s3:GetObject
             Resource:
             - Fn::Sub: ${Artifacts.Arn}/*
+          - Effect: Allow
+            Action:
+            - kms:Decrypt
+            - kms:GenerateDataKey
+            Resource:
+            - Fn::GetAtt:
+              - ArtifactsKey
+              - Arn
+          - Effect: Allow
+            Action:
+            - kms:CreateKey
+            - kms:DescribeKey
+            - kms:GetKeyPolicy
+            - kms:PutKeyPolicy
+            - kms:EnableKeyRotation
+            - kms:GetKeyRotationStatus
+            - kms:TagResource
+            - kms:UntagResource
+            - kms:ListResourceTags
+            - kms:ScheduleKeyDeletion
+            - kms:CancelKeyDeletion
+            Resource: '*'
   GitHubDeployRole:
     Type: AWS::IAM::Role
     Properties:
@@ -392,6 +418,31 @@ Resources:
             - s3:DeleteObjectVersion
             Resource:
             - Fn::Sub: arn:${AWS::Partition}:s3:::${StackPrefix}-*/exports/*
+          - Effect: Allow
+            Action:
+            - kms:Decrypt
+            - kms:GenerateDataKey
+            Resource:
+            - Fn::GetAtt:
+              - ArtifactsKey
+              - Arn
+  ArtifactsKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: CatFi encrypted data at rest
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: EnableAccountIAM
+          Effect: Allow
+          Principal:
+            AWS:
+              Fn::Sub: arn:${AWS::Partition}:iam::${AWS::AccountId}:root
+          Action: kms:*
+          Resource: '*'
 Outputs:
   DeployRoleArn:
     Value:

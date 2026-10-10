@@ -14,7 +14,7 @@ class SecurityWorkflowTests(unittest.TestCase):
 
     def test_trivy_action_tag_is_valid_in_both_jobs(self):
         refs = re.findall(r"uses:\s*(aquasecurity/trivy-action@\S+)", self.content)
-        self.assertEqual(refs, ["aquasecurity/trivy-action@v0.32.0"] * 2)
+        self.assertEqual(refs, ["aquasecurity/trivy-action@v0.36.0"] * 2)
 
     def test_trivy_scans_fail_on_high_severity(self):
         for name in ("repository-scan", "container"):
