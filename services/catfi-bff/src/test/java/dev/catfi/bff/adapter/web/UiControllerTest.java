@@ -7,10 +7,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.*;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
 
-@org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest(UiController.class)
+@org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest(UiController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class UiControllerTest {
 

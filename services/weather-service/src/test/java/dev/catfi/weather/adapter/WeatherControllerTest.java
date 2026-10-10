@@ -10,7 +10,7 @@ import dev.catfi.weather.domain.WeatherSnapshot;
 import java.util.*;
 import org.junit.jupiter.api.Test;
 
-@org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest(WeatherController.class)
+@org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest(WeatherController.class)
 class WeatherControllerTest {
 
   @org.springframework.beans.factory.annotation.Autowired

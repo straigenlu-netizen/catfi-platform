@@ -8,7 +8,7 @@ import org.springframework.web.client.RestTemplate;
 public class AppConfig {
   @Bean
   public RestTemplate restTemplate(
-      org.springframework.boot.web.client.RestTemplateBuilder builder) {
+      org.springframework.boot.restclient.RestTemplateBuilder builder) {
     return builder
         .connectTimeout(java.time.Duration.ofSeconds(3))
         .readTimeout(java.time.Duration.ofSeconds(5))

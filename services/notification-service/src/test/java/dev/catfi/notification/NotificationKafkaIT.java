@@ -10,7 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.context.EmbeddedKafka;
@@ -21,7 +21,7 @@ import org.springframework.kafka.test.utils.ContainerTestUtils;
 class NotificationKafkaIT {
   @Autowired KafkaTemplate<String,Object> kafka;
   @Autowired KafkaListenerEndpointRegistry listeners;
-  @MockBean NotificationService notifications;
+  @MockitoBean NotificationService notifications;
 
   @BeforeEach
   void awaitDamageConsumerAssignment() {

@@ -10,11 +10,11 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest(
+@org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest(
     properties = "spring.jpa.hibernate.ddl-auto=validate")
-@org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase(
+@org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase(
     replace =
-        org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace.NONE)
+        org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
 class DatabaseMigrationIT {
   @Container @ServiceConnection

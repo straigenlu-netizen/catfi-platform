@@ -31,8 +31,8 @@ class DamageKafkaIT {
   @org.springframework.context.annotation.Configuration
   @org.springframework.boot.autoconfigure.EnableAutoConfiguration(
       exclude = {
-        org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration.class,
-        org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration.class
+        org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration.class,
+        org.springframework.boot.data.mongodb.autoconfigure.MongoDataAutoConfiguration.class
       })
   @org.springframework.context.annotation.Import({
     DamageEventProcessor.class,

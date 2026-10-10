@@ -737,6 +737,10 @@ Resources:
                 Fn::GetAtt:
                 - SchedulerDLQ
                 - Arn
+            RoleArn:
+              Fn::GetAtt:
+              - WeatherScheduleRole
+              - Arn
       EventInvokeConfig:
         MaximumRetryAttempts: 2
         DestinationConfig:
@@ -991,6 +995,48 @@ Resources:
             StringEquals:
               aws:SourceAccount:
                 Ref: AWS::AccountId
+  WeatherScheduleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: scheduler.amazonaws.com
+          Action: sts:AssumeRole
+          Condition:
+            StringEquals:
+              aws:SourceAccount:
+                Ref: AWS::AccountId
+      Policies:
+      - PolicyName: InvokeWeatherAndEncryptedDeadLetter
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - lambda:InvokeFunction
+            Resource:
+            - Fn::GetAtt:
+              - WeatherUpdaterFunction
+              - Arn
+            - Fn::Sub: ${WeatherUpdaterFunction.Arn}:live
+          - Effect: Allow
+            Action:
+            - sqs:SendMessage
+            Resource:
+            - Fn::GetAtt:
+              - SchedulerDLQ
+              - Arn
+          - Effect: Allow
+            Action:
+            - kms:Decrypt
+            - kms:GenerateDataKey
+            Resource:
+            - Fn::GetAtt:
+              - DataKey
+              - Arn
 Outputs:
   ApiUrl:
     Value:

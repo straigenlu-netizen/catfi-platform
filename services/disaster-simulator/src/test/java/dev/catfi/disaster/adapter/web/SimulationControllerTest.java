@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.*;
 import org.junit.jupiter.api.Test;
 
-@org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest(SimulationController.class)
+@org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest(SimulationController.class)
 class SimulationControllerTest {
 
   @org.springframework.beans.factory.annotation.Autowired
