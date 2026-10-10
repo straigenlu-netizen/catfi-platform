@@ -1,9 +1,8 @@
 spring:
   application:
     name: damage-service
-  data:
-    mongodb:
-      uri: mongodb://localhost:27017/catfi_damage
+  mongodb:
+    uri: mongodb://localhost:27017/catfi_damage
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
