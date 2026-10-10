@@ -15,3 +15,5 @@ SonarQube bootstrap generates a random administrator password with guaranteed up
 Security thresholds remain HIGH/CRITICAL for Trivy and CVSS 7 for Dependency-Check. Failed dependency scans are findings to investigate, not a reason to disable checks.
 
 Dependency-Check 13.0.0 downloads the official NIST NVD 2.0 compressed feeds directly. This retains the full NVD dataset while avoiding unauthenticated API pagination and its rate limits. The versioned database cache is preserved after findings so subsequent scans can update incrementally. No NVD API key is required in feed mode.
+
+Weather caching is enabled in a dedicated configuration class. Full application contexts retain the configured cache provider; HTTP controller slice tests do not require a Redis connection or cache manager.
