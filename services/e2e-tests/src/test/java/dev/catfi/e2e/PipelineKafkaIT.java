@@ -73,6 +73,7 @@ import org.springframework.web.client.RestTemplate;
     },
     bootstrapServersProperty = "spring.kafka.bootstrap-servers")
 @DirtiesContext
+@org.testcontainers.junit.jupiter.Testcontainers
 class PipelineKafkaIT {
 
   private static final UUID PROPERTY = UUID.fromString("10000000-0000-0000-0000-000000000001");
@@ -87,8 +88,19 @@ class PipelineKafkaIT {
     }
   }
 
+  @org.testcontainers.junit.jupiter.Container
+  static final org.testcontainers.containers.PostgreSQLContainer<?> DB =
+      new org.testcontainers.containers.PostgreSQLContainer<>("postgres:17.6-alpine");
+
   @DynamicPropertySource
   static void properties(DynamicPropertyRegistry registry) {
+    DB.start();
+    registry.add("spring.datasource.url", DB::getJdbcUrl);
+    registry.add("spring.datasource.username", DB::getUsername);
+    registry.add("spring.datasource.password", DB::getPassword);
+    registry.add("spring.liquibase.enabled", () -> false);
+    registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
+    registry.add("catfi.outbox.poll-ms", () -> "200");
     registry.add("server.port", () -> PORT);
     registry.add("services.disaster.url", () -> "http://127.0.0.1:" + PORT);
   }
@@ -96,13 +108,13 @@ class PipelineKafkaIT {
   @SpringBootConfiguration
   @EnableAutoConfiguration(
       exclude = {
-        DataSourceAutoConfiguration.class,
         HibernateJpaAutoConfiguration.class,
         JpaRepositoriesAutoConfiguration.class,
         LiquibaseAutoConfiguration.class,
         MongoAutoConfiguration.class,
         MongoDataAutoConfiguration.class
       })
+  @org.springframework.scheduling.annotation.EnableScheduling
   @EnableFeignClients(clients = DisasterClient.class)
   @Import({
     UiController.class,
@@ -110,6 +122,7 @@ class PipelineKafkaIT {
     SensorEventProcessor.class,
     DamageEventProcessor.class,
     CompensationEventProcessor.class,
+    dev.catfi.compensation.adapter.kafka.CompensationOutboxPublisher.class,
     PaymentEventProcessor.class,
     InvestmentEventProcessor.class,
     PortfolioEventProcessor.class,
@@ -162,8 +175,25 @@ class PipelineKafkaIT {
     }
 
     @org.springframework.context.annotation.Bean
-    CompensationRepository compensationRepository() {
-      return mock(CompensationRepository.class);
+    dev.catfi.compensation.application.DurableCompensationLedger compensationLedger(
+        org.springframework.jdbc.core.JdbcTemplate jdbc,
+        CompensationApplicationService calculator,
+        com.fasterxml.jackson.databind.ObjectMapper json) {
+      // PostgreSQL backs the ledger and outbox; repository adapter writes into that same transaction.
+      jdbc.execute("CREATE TABLE compensation_results (id UUID PRIMARY KEY, property_id UUID NOT NULL, "
+          + "damage_assessment_id UUID UNIQUE NOT NULL, amount NUMERIC(18,2) NOT NULL)");
+      jdbc.execute("CREATE TABLE compensation_outbox (id UUID PRIMARY KEY REFERENCES compensation_results(id), "
+          + "property_id UUID NOT NULL, payload JSONB NOT NULL, created_at TIMESTAMPTZ DEFAULT now(), "
+          + "published_at TIMESTAMPTZ)");
+      var repo = mock(CompensationRepository.class);
+      when(repo.findByDamageAssessmentId(any())).thenReturn(Optional.empty());
+      when(repo.saveAndFlush(any())).thenAnswer(call -> {
+        dev.catfi.compensation.adapter.persistence.CompensationResultEntity row = call.getArgument(0);
+        jdbc.update("INSERT INTO compensation_results (id, property_id, damage_assessment_id, amount) VALUES (?,?,?,?)",
+            row.getId(), row.getPropertyId(), row.getDamageAssessmentId(), row.getAmount());
+        return row;
+      });
+      return new dev.catfi.compensation.application.DurableCompensationLedger(jdbc, repo, calculator, json);
     }
 
     @org.springframework.context.annotation.Bean
@@ -172,15 +202,15 @@ class PipelineKafkaIT {
     }
 
     @org.springframework.context.annotation.Bean
+    dev.catfi.portfolio.adapter.persistence.ProcessedInvestmentRepository investmentReceipts() {
+      return mock(dev.catfi.portfolio.adapter.persistence.ProcessedInvestmentRepository.class);
+    }
+
+    @org.springframework.context.annotation.Bean
     PortfolioRepository portfolioRepository() {
       return mock(PortfolioRepository.class);
     }
 
-
-    @org.springframework.context.annotation.Bean
-    org.springframework.jdbc.core.JdbcTemplate portfolioJdbcTemplate() {
-      return mock(org.springframework.jdbc.core.JdbcTemplate.class);
-    }
 
     @org.springframework.context.annotation.Bean
     PolicyClient policyClient() {
